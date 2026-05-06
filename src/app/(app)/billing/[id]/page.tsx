@@ -1,0 +1,197 @@
+"use client";
+
+import { getTestById } from "@/data/catalogue";
+import { useData } from "@/contexts/data-context";
+import {
+  DemoDisclaimer,
+  DEMO_DISCLAIMER_TEXT,
+} from "@/components/demo/demo-disclaimer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import type { PaymentMethod, PaymentStatus } from "@/types";
+import Link from "next/link";
+import { notFound, useParams } from "next/navigation";
+import { Printer } from "lucide-react";
+import { resolveTestPrice } from "@/lib/pricing";
+
+export default function InvoiceDetailPage() {
+  const params = useParams<{ id: string }>();
+  const { store, updateInvoice } = useData();
+  const inv = store.invoices.find((i) => i.id === params.id);
+
+  if (!inv) notFound();
+
+  const patient = store.patients.find((p) => p.id === inv.patientId);
+
+  return (
+    <div className="space-y-4 max-w-3xl">
+      <div className="flex flex-wrap items-center justify-between gap-2 no-print">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Invoice</h1>
+          <p className="text-sm text-muted-foreground font-mono">
+            {inv.invoiceNumber}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="size-4" />
+            Print / PDF
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/billing">Back</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="no-print">
+        <DemoDisclaimer variant="inline" />
+      </div>
+
+      <Card className="no-print border-border/70 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base">Payment</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select
+              value={inv.paymentStatus}
+              onValueChange={(v) =>
+                updateInvoice(inv.id, { paymentStatus: v as PaymentStatus })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                <SelectItem value="Unpaid">Unpaid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Method</Label>
+            <Select
+              value={inv.paymentMethod ?? "none"}
+              onValueChange={(v) =>
+                updateInvoice(inv.id, {
+                  paymentMethod:
+                    v === "none" ? undefined : (v as PaymentMethod),
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">—</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="EcoCash">EcoCash</SelectItem>
+                <SelectItem value="Swipe">Swipe</SelectItem>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                <SelectItem value="Medical Aid">Medical Aid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Receipt number</Label>
+            <Input
+              value={inv.receiptNumber ?? ""}
+              onChange={(e) =>
+                updateInvoice(inv.id, {
+                  receiptNumber: e.target.value || undefined,
+                })
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div
+        id="invoice-print"
+        className="rounded-xl border border-border/70 bg-card p-6 shadow-sm print:shadow-none print:border-0"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
+          <div>
+            <p className="text-lg font-semibold tracking-tight">
+              {store.settings.labName}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {store.settings.address}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {store.settings.phone} · {store.settings.email}
+            </p>
+          </div>
+          <div className="text-right text-sm">
+            <p className="font-mono font-medium">{inv.invoiceNumber}</p>
+            <p className="text-muted-foreground">{inv.createdAt}</p>
+            <Badge className="mt-2" variant="secondary">
+              {inv.paymentStatus}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          <div>
+            <p className="text-xs text-muted-foreground">Patient</p>
+            <p className="font-medium">{patient?.fullName ?? inv.patientId}</p>
+            <p className="text-xs text-muted-foreground">{inv.patientId}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Linked order</p>
+            <p className="font-medium">{inv.orderId ?? "—"}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <p className="text-sm font-medium">Tests billed</p>
+          <ul className="divide-y divide-border/60 rounded-lg border border-border/60 text-sm">
+            {inv.testIds.map((tid) => {
+              const t = getTestById(tid);
+              const line = resolveTestPrice(tid, store.settings);
+              return (
+                <li key={tid} className="flex justify-between gap-3 px-3 py-2">
+                  <span>{t?.name ?? tid}</span>
+                  <span className="font-mono">${line.toFixed(2)}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex justify-between text-sm pt-2">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span>${inv.subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Discount</span>
+            <span>- ${inv.discount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Tax</span>
+            <span>${inv.tax.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-base font-semibold border-t border-border/60 pt-2">
+            <span>Total</span>
+            <span>${inv.total.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-lg bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-900/50 p-3 text-xs text-amber-950 dark:text-amber-50">
+          <p className="font-semibold">Demo invoice — not legally binding</p>
+          <p className="mt-1">{DEMO_DISCLAIMER_TEXT}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
