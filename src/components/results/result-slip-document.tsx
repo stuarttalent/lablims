@@ -1,7 +1,7 @@
 "use client";
 
 import { getTestById } from "@/data/catalogue";
-import type { DemoStore, LabOrder, Patient, TestDepartment } from "@/types";
+import type { DemoStore, LabOrder, OrderTestLine, Patient, TestDepartment } from "@/types";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { buildResultVerificationToken } from "@/lib/verification-token";
@@ -13,6 +13,25 @@ const DEPT_ORDER: TestDepartment[] = [
   "Serology/Immunology",
   "Molecular",
 ];
+
+/** One row per distinct enterer / authorizer combination (no repeated users). */
+function uniqueAttributionRows(tests: OrderTestLine[]): OrderTestLine[] {
+  const seen = new Set<string>();
+  const out: OrderTestLine[] = [];
+  for (const line of tests) {
+    const key = [
+      line.enteredBy ?? "",
+      line.enteredByCredential ?? "",
+      line.verifiedBy ?? "",
+      line.verifiedByCredential ?? "",
+      line.verificationDate ?? "",
+    ].join("\u001f");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(line);
+  }
+  return out;
+}
 
 export function ResultSlipDocument({
   order,
@@ -62,6 +81,8 @@ export function ResultSlipDocument({
   const released =
     order.status === "Released" ||
     order.tests.some((l) => l.resultStatus === "Released");
+
+  const attributionRows = uniqueAttributionRows(order.tests);
 
   return (
     <div
@@ -284,7 +305,52 @@ export function ResultSlipDocument({
               Result entry &amp; authorization
             </h3>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[11px]">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600 print:bg-white print:text-slate-800">
+                  <th className="px-3 py-2 font-semibold">Entered by</th>
+                  <th className="px-3 py-2 font-semibold">Credentials</th>
+                  <th className="px-3 py-2 font-semibold">Authorized by</th>
+                  <th className="px-3 py-2 font-semibold">Auth. credentials</th>
+                  <th className="px-3 py-2 font-semibold">Auth. date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributionRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-3 text-center text-slate-500 print:text-slate-700">
+                      —
+                    </td>
+                  </tr>
+                ) : (
+                  attributionRows.map((line, idx) => (
+                    <tr
+                      key={`${line.enteredBy ?? ""}-${line.verifiedBy ?? ""}-${line.verificationDate ?? ""}-${idx}`}
+                      className="border-b border-slate-100 last:border-0 print:border-slate-200"
+                    >
+                      <td className="px-3 py-2 text-slate-800 print:text-slate-900">
+                        {line.enteredBy ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 print:text-slate-800">
+                        {line.enteredByCredential ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-teal-900 print:text-slate-900">
+                        {line.verifiedBy ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 print:text-slate-800">
+                        {line.verifiedByCredential ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 print:text-slate-800">
+                        {line.verificationDate ?? "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-teal-100 px-4 py-3 print:border-slate-300">
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide print:rounded-md print:border print:border-slate-600 print:bg-white ${released ? "bg-emerald-100 text-emerald-900 print:text-slate-900" : "bg-amber-100 text-amber-900 print:text-slate-900"}`}
