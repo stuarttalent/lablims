@@ -9,6 +9,8 @@ import {
   resolveReferenceRangeForPatient,
 } from "@/lib/catalogue-rules";
 import { orderToAiCommentPayload } from "@/lib/ai-result-comment";
+import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
+import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
 import type { LineResultStatus, OrderStatus, ResultFlag } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +59,10 @@ export default function ResultsWorkspacePage() {
   const { store, updateOrderLine, updateOrder } = useData();
   const { user } = useAuth();
   const [aiBusy, setAiBusy] = useState(false);
+  const [deltaAiByTestId, setDeltaAiByTestId] = useState<Record<string, string>>({});
+  const [deltaAiBusyId, setDeltaAiBusyId] = useState<string | null>(null);
+  const [preAuthAiByTestId, setPreAuthAiByTestId] = useState<Record<string, string>>({});
+  const [preAuthBusyId, setPreAuthBusyId] = useState<string | null>(null);
   const order = store.orders.find((o) => o.id === params.orderId);
 
   if (!order) notFound();
@@ -89,6 +95,75 @@ export default function ResultsWorkspacePage() {
       toast.error("Generation failed.");
     } finally {
       setAiBusy(false);
+    }
+  }
+
+  async function fetchDeltaAi(
+    testName: string,
+    line: {
+      testId: string;
+      resultValue?: string;
+      flag?: ResultFlag;
+    },
+    prior: NonNullable<ReturnType<typeof findPriorResultForTest>>,
+  ) {
+    setDeltaAiBusyId(line.testId);
+    try {
+      const res = await fetch("/api/ai/result-delta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          testName,
+          current: { value: line.resultValue ?? "", flag: line.flag },
+          prior,
+        }),
+      });
+      const data = (await res.json()) as { sentence?: string; source?: string; error?: string };
+      if (!res.ok || !data.sentence) {
+        toast.error(data.error ?? "Could not refine delta wording.");
+        return;
+      }
+      setDeltaAiByTestId((m) => ({ ...m, [line.testId]: data.sentence! }));
+      toast.success(
+        data.source === "openai"
+          ? "Delta wording refined (AI)."
+          : "Delta wording updated (heuristic — set OPENAI_API_KEY for full AI).",
+      );
+    } catch {
+      toast.error("Request failed.");
+    } finally {
+      setDeltaAiBusyId(null);
+    }
+  }
+
+  async function fetchPreAuthBrief(
+    orderId: string,
+    testId: string,
+    testName: string,
+    issues: string[],
+  ) {
+    setPreAuthBusyId(testId);
+    try {
+      const res = await fetch("/api/ai/pre-auth-checklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issues, orderId, testId, testName }),
+      });
+      const data = (await res.json()) as { summary?: string; source?: string; error?: string };
+      if (!res.ok || !data.summary) {
+        toast.error(data.error ?? "Could not summarize checklist.");
+        return;
+      }
+      setPreAuthAiByTestId((m) => ({ ...m, [testId]: data.summary! }));
+      toast.success(
+        data.source === "openai"
+          ? "Pre-authorization brief ready (AI)."
+          : "Brief ready (rules summary — set OPENAI_API_KEY for full AI).",
+      );
+    } catch {
+      toast.error("Request failed.");
+    } finally {
+      setPreAuthBusyId(null);
     }
   }
 
@@ -236,6 +311,17 @@ export default function ResultsWorkspacePage() {
                   ? "destructive"
                   : "warn"
                 : null;
+            const prior = findPriorResultForTest(
+              store,
+              order.patientId,
+              line.testId,
+              order.id,
+            );
+            const issues =
+              line.resultStatus === "Pending Verification"
+                ? computePreAuthIssues(order, line)
+                : [];
+            const rulesBrief = heuristicPreAuthSummary(issues);
             return (
               <div key={line.testId}>
                 {idx > 0 ? <Separator className="mb-6" /> : null}
@@ -385,6 +471,55 @@ export default function ResultsWorkspacePage() {
                       </Button>
                     ) : null}
                   </div>
+                  {prior ? (
+                    <div className="sm:col-span-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-3 space-y-2">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                        Prior result (same patient &amp; test)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Accession{" "}
+                        <Link
+                          href={`/results/${prior.orderId}`}
+                          className="font-mono text-foreground underline-offset-2 hover:underline"
+                        >
+                          {prior.orderId}
+                        </Link>
+                        {" · collected "}
+                        <span className="text-foreground">{prior.collectionDate}</span>
+                        {" · value "}
+                        <span className="font-medium text-foreground">
+                          {prior.line.resultValue}
+                        </span>
+                        {prior.line.flag && prior.line.flag !== "Normal" ? (
+                          <span> ({prior.line.flag})</span>
+                        ) : null}
+                      </p>
+                      <p className="text-sm leading-snug">
+                        {deltaAiByTestId[line.testId] ??
+                          heuristicDeltaSentence(meta?.name ?? line.testId, {
+                            value: line.resultValue ?? "",
+                            flag: line.flag,
+                          }, prior)}
+                      </p>
+                      {!readOnly && user ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 gap-1.5"
+                          disabled={deltaAiBusyId === line.testId}
+                          onClick={() =>
+                            void fetchDeltaAi(meta?.name ?? line.testId, line, prior)
+                          }
+                        >
+                          <Sparkles className="size-3.5" />
+                          {deltaAiBusyId === line.testId
+                            ? "Refining…"
+                            : "Refine wording (AI)"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="sm:col-span-2 text-xs text-muted-foreground space-y-1">
                     <p>
                       Entered by: {line.enteredBy ?? "—"}
@@ -405,92 +540,147 @@ export default function ResultsWorkspacePage() {
                 </div>
 
                 {!readOnly && user && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {canEnterResults(user.role) && (
-                      <>
+                  <>
+                    {canVerifyResults(user.role) &&
+                    line.resultStatus === "Pending Verification" ? (
+                      <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-50/30 dark:bg-amber-950/20 p-3 space-y-2">
+                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                          Pre-authorization rule check
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Deterministic checks only. AI below restates the same items — it does not
+                          replace your review or add diagnoses.
+                        </p>
+                        {issues.length === 0 ? (
+                          <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                            {rulesBrief}
+                          </p>
+                        ) : (
+                          <ul className="text-sm list-disc pl-5 space-y-1">
+                            {issues.map((issue) => (
+                              <li key={issue}>{issue}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {preAuthAiByTestId[line.testId] ? (
+                          <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 leading-relaxed">
+                            {preAuthAiByTestId[line.testId]}
+                          </p>
+                        ) : issues.length > 0 ? (
+                          <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 italic">
+                            {rulesBrief}
+                          </p>
+                        ) : null}
                         <Button
+                          type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            updateOrderLine(order.id, line.testId, {
-                              resultStatus: "Draft",
-                              enteredBy: user.name,
-                              enteredByCredential: user.professionalCredential,
-                            });
-                            toast.message("Draft saved");
-                          }}
+                          className="h-8 gap-1.5"
+                          disabled={preAuthBusyId === line.testId}
+                          onClick={() =>
+                            void fetchPreAuthBrief(
+                              order.id,
+                              line.testId,
+                              meta?.name ?? line.testId,
+                              issues,
+                            )
+                          }
                         >
-                          Save entered result
+                          <Sparkles className="size-3.5" />
+                          {preAuthBusyId === line.testId
+                            ? "Summarizing…"
+                            : "Summarize for sign-off (AI)"}
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            updateOrderLine(order.id, line.testId, {
-                              resultStatus: "Pending Verification",
-                              enteredBy: user.name,
-                              enteredByCredential: user.professionalCredential,
-                            });
-                            const next = order.tests.map((l) =>
-                              l.testId === line.testId
-                                ? {
-                                    ...l,
-                                    resultStatus:
-                                      "Pending Verification" as LineResultStatus,
-                                    enteredBy: user.name,
-                                    enteredByCredential:
-                                      user.professionalCredential,
-                                  }
-                                : l,
-                            );
-                            updateOrder(order.id, {
-                              status: syncOrderStatusFromLines(next),
-                            });
-                            toast.success("Submitted for authorization.");
-                          }}
-                        >
-                          Submit for authorization
-                        </Button>
-                      </>
-                    )}
-                    {canVerifyResults(user.role) &&
-                      line.resultStatus === "Pending Verification" && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            const verifiedBy = user.name;
-                            const verifiedByCredential =
-                              user.professionalCredential;
-                            const verificationDate = new Date()
-                              .toISOString()
-                              .slice(0, 10);
-                            updateOrderLine(order.id, line.testId, {
-                              resultStatus: "Released",
-                              verifiedBy,
-                              verifiedByCredential,
-                              verificationDate,
-                            });
-                            const next = order.tests.map((l) =>
-                              l.testId === line.testId
-                                ? {
-                                    ...l,
-                                    resultStatus: "Released" as LineResultStatus,
-                                    verifiedBy,
-                                    verifiedByCredential,
-                                    verificationDate,
-                                  }
-                                : l,
-                            );
-                            updateOrder(order.id, {
-                              status: syncOrderStatusFromLines(next),
-                            });
-                            toast.success("Result authorized and released.");
-                          }}
-                        >
-                          Authorize
-                        </Button>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canEnterResults(user.role) && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              updateOrderLine(order.id, line.testId, {
+                                resultStatus: "Draft",
+                                enteredBy: user.name,
+                                enteredByCredential: user.professionalCredential,
+                              });
+                              toast.message("Draft saved");
+                            }}
+                          >
+                            Save entered result
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              updateOrderLine(order.id, line.testId, {
+                                resultStatus: "Pending Verification",
+                                enteredBy: user.name,
+                                enteredByCredential: user.professionalCredential,
+                              });
+                              const next = order.tests.map((l) =>
+                                l.testId === line.testId
+                                  ? {
+                                      ...l,
+                                      resultStatus:
+                                        "Pending Verification" as LineResultStatus,
+                                      enteredBy: user.name,
+                                      enteredByCredential:
+                                        user.professionalCredential,
+                                    }
+                                  : l,
+                              );
+                              updateOrder(order.id, {
+                                status: syncOrderStatusFromLines(next),
+                              });
+                              toast.success("Submitted for authorization.");
+                            }}
+                          >
+                            Submit for authorization
+                          </Button>
+                        </>
                       )}
-                  </div>
+                      {canVerifyResults(user.role) &&
+                        line.resultStatus === "Pending Verification" && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const verifiedBy = user.name;
+                              const verifiedByCredential =
+                                user.professionalCredential;
+                              const verificationDate = new Date()
+                                .toISOString()
+                                .slice(0, 10);
+                              updateOrderLine(order.id, line.testId, {
+                                resultStatus: "Released",
+                                verifiedBy,
+                                verifiedByCredential,
+                                verificationDate,
+                              });
+                              const next = order.tests.map((l) =>
+                                l.testId === line.testId
+                                  ? {
+                                      ...l,
+                                      resultStatus: "Released" as LineResultStatus,
+                                      verifiedBy,
+                                      verifiedByCredential,
+                                      verificationDate,
+                                    }
+                                  : l,
+                              );
+                              updateOrder(order.id, {
+                                status: syncOrderStatusFromLines(next),
+                              });
+                              toast.success("Result authorized and released.");
+                            }}
+                          >
+                            Authorize
+                          </Button>
+                        )}
+                    </div>
+                  </>
                 )}
               </div>
             );

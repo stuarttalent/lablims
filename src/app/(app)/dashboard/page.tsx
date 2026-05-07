@@ -33,6 +33,7 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types";
@@ -47,6 +48,7 @@ import {
   FileWarning,
   FlaskConical,
   Receipt,
+  Sparkles,
   TestTube,
   UserPlus,
   Users,
@@ -56,6 +58,17 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { store, hydrated } = useData();
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const [shiftNarrative, setShiftNarrative] = useState<string | null>(null);
+  const [shiftStats, setShiftStats] = useState<{
+    incompleteOrders: number;
+    statIncomplete: number;
+    overdueVsEta: number;
+    warningVsEta: number;
+    onTrackVsEta: number;
+    pendingVerificationLines: number;
+  } | null>(null);
+  const [shiftSource, setShiftSource] = useState<"openai" | "heuristic" | null>(null);
 
   if (!hydrated) {
     return (
@@ -118,6 +131,54 @@ export default function DashboardPage() {
     return { department: dep, tests: count };
   });
 
+  async function generateShiftBrief() {
+    setShiftBusy(true);
+    try {
+      const res = await fetch("/api/ai/shift-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ store }),
+      });
+      const data = (await res.json()) as {
+        narrative?: string;
+        stats?: {
+          incompleteOrders: number;
+          statIncomplete: number;
+          overdueVsEta: number;
+          warningVsEta: number;
+          onTrackVsEta: number;
+          pendingVerificationLines: number;
+          topDepartmentBacklog: { department: string; openLines: number }[];
+        };
+        source?: "openai" | "heuristic";
+        error?: string;
+      };
+      if (!res.ok || !data.narrative || !data.stats) {
+        toast.error(data.error ?? "Could not build shift briefing.");
+        return;
+      }
+      setShiftNarrative(data.narrative);
+      setShiftStats({
+        incompleteOrders: data.stats.incompleteOrders,
+        statIncomplete: data.stats.statIncomplete,
+        overdueVsEta: data.stats.overdueVsEta,
+        warningVsEta: data.stats.warningVsEta,
+        onTrackVsEta: data.stats.onTrackVsEta,
+        pendingVerificationLines: data.stats.pendingVerificationLines,
+      });
+      setShiftSource(data.source ?? "heuristic");
+      toast.success(
+        data.source === "openai"
+          ? "Briefing ready (AI)."
+          : "Briefing ready (heuristic — set OPENAI_API_KEY for full AI).",
+      );
+    } catch {
+      toast.error("Shift briefing request failed.");
+    } finally {
+      setShiftBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -137,6 +198,56 @@ export default function DashboardPage() {
       </div>
 
       {user ? <QuickActions role={user.role} /> : null}
+
+      {user ? (
+        <Card className="border-border/70 shadow-sm border-sky-500/20 bg-sky-50/15 dark:bg-sky-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="size-4 text-sky-600" />
+              Shift &amp; routing snapshot
+            </CardTitle>
+            <CardDescription>
+              Computed from open accessions vs catalogue ETA, STAT load, authorization queue, and
+              departmental backlogs. Optional AI rephrases the same numbers — verify against live
+              operations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              size="sm"
+              disabled={shiftBusy}
+              onClick={() => void generateShiftBrief()}
+            >
+              {shiftBusy ? "Generating…" : "Generate shift briefing"}
+            </Button>
+            {shiftStats ? (
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="secondary">Active: {shiftStats.incompleteOrders}</Badge>
+                <Badge variant="secondary">STAT: {shiftStats.statIncomplete}</Badge>
+                <Badge variant="outline">On track: {shiftStats.onTrackVsEta}</Badge>
+                <Badge variant="outline">Warning: {shiftStats.warningVsEta}</Badge>
+                <Badge variant="destructive">Late vs ETA: {shiftStats.overdueVsEta}</Badge>
+                <Badge variant="secondary">
+                  Auth queue: {shiftStats.pendingVerificationLines}
+                </Badge>
+                {shiftSource ? (
+                  <Badge variant="outline" className="font-normal">
+                    {shiftSource === "openai" ? "AI narrative" : "Heuristic narrative"}
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
+            {shiftNarrative ? (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{shiftNarrative}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                Run a briefing to populate workload vs ETA buckets and a short narrative.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard
