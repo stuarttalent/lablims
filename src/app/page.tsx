@@ -1,16 +1,12 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { LabMarketingShell } from "@/components/layout/lab-marketing-shell";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, FlaskConical, LogIn } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-
-/** Stock photography: laboratory microscopes (Unsplash). */
-const HERO_SRC =
-  "https://images.unsplash.com/photo-1631549916768-4119b382e760?auto=format&fit=crop&q=85&w=2400";
 
 export default function Home() {
   const { user, hydrated } = useAuth();
@@ -38,22 +34,8 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
-      <Image
-        src={HERO_SRC}
-        alt=""
-        fill
-        priority
-        className="object-cover"
-        sizes="100vw"
-      />
-      <div
-        className="absolute inset-0 bg-gradient-to-br from-slate-950/92 via-slate-950/75 to-primary/25"
-        aria-hidden
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.12),transparent_55%)]" />
-
-      <div className="relative z-10 flex min-h-screen flex-col">
+    <LabMarketingShell variant="landing">
+      <div className="flex min-h-screen flex-col">
         <header className="flex items-center justify-between px-5 py-5 sm:px-8">
           <div className="flex items-center gap-3">
             <div className="flex size-11 items-center justify-center rounded-xl bg-white/12 text-white ring-1 ring-white/20 shadow-lg backdrop-blur-md">
@@ -115,9 +97,13 @@ export default function Home() {
             </div>
 
             <p className="mt-10 text-xs leading-relaxed text-white/45">
-              Background stock photography via{" "}
+              Hero photograph is shipped in{" "}
+              <code className="rounded bg-white/10 px-1 py-0.5 text-[10px]">
+                /public/hero-lab.jpg
+              </code>{" "}
+              so it always loads. Source:{" "}
               <a
-                href="https://unsplash.com?utm_source=lablims-demo&utm_medium=referral"
+                href="https://unsplash.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline decoration-white/30 underline-offset-2 hover:text-white/70"
@@ -129,6 +115,6 @@ export default function Home() {
           </div>
         </main>
       </div>
-    </div>
+    </LabMarketingShell>
   );
 }
