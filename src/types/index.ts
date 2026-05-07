@@ -1,10 +1,18 @@
-export type UserRole = "admin" | "scientist" | "tech" | "biller" | "doctor";
+export type UserRole =
+  | "super_admin"
+  | "admin"
+  | "scientist"
+  | "tech"
+  | "biller"
+  | "doctor";
 
 export interface MockUser {
   id: string;
   email: string;
   name: string;
   role: UserRole;
+  /** Shown on result slips (e.g. qualifications, registration id). */
+  professionalCredential?: string;
 }
 
 export type TestDepartment =
@@ -71,7 +79,12 @@ export interface OrderTestLine {
   flag?: ResultFlag;
   comment?: string;
   enteredBy?: string;
+  /** Qualifications / registration shown on the result slip. */
+  enteredByCredential?: string;
+  /** Authorized signatory (laboratory authorizer). */
   verifiedBy?: string;
+  /** Qualifications / registration for authorizer, shown on slip. */
+  verifiedByCredential?: string;
   verificationDate?: string;
   resultStatus?: LineResultStatus;
 }
@@ -133,6 +146,8 @@ export interface LabSettings {
   fhirOrganizationId?: string;
   /** Unique per browser / deployment; used for report QR verification. */
   limsInstanceId?: string;
+  /** Optional logo for reports (data URL, e.g. PNG). */
+  logoDataUrl?: string;
 }
 
 export interface DemoStore {

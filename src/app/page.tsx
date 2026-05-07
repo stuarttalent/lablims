@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { LabMarketingShell } from "@/components/layout/lab-marketing-shell";
 import { Button } from "@/components/ui/button";
+import { LabLoader } from "@/components/ui/lab-loader";
 import { ArrowRight, FlaskConical, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,8 +20,8 @@ export default function Home() {
 
   if (!hydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Loading…
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <LabLoader message="Starting LabLIMS…" />
       </div>
     );
   }

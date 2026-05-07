@@ -2,7 +2,7 @@
 
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
-import { canEditPatient } from "@/lib/permissions";
+import { canCreateOrder, canEditPatient } from "@/lib/permissions";
 import type { Patient } from "@/types";
 import { getTestById } from "@/data/catalogue";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ export default function PatientProfilePage() {
           <Button size="sm" variant="outline" asChild>
             <Link href="/patients">Back to list</Link>
           </Button>
-          {user && (user.role === "admin" || user.role === "doctor") && (
+          {user && canCreateOrder(user.role) && (
             <Button size="sm" asChild>
               <Link href={`/orders/new?patient=${patient.id}`}>New test request</Link>
             </Button>

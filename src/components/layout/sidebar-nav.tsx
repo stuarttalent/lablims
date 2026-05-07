@@ -34,6 +34,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
+/** Main navigation — fixed order per clinical operations workflow. */
 const PRIMARY_ITEMS: NavItem[] = [
   {
     href: "/dashboard",
@@ -48,30 +49,37 @@ const PRIMARY_ITEMS: NavItem[] = [
     icon: Users,
   },
   {
-    href: "/orders",
-    label: "Orders",
-    shortDescription: "Test requests",
-    icon: ClipboardList,
+    href: "/billing",
+    label: "Billing & payments",
+    shortDescription: "Invoices",
+    icon: Receipt,
   },
   {
-    href: "/catalogue",
-    label: "Available tests",
-    shortDescription: "What we offer",
-    icon: FlaskConical,
+    href: "/orders",
+    label: "Worklist",
+    shortDescription: "Orders & workflow",
+    icon: ClipboardList,
   },
   {
     href: "/results",
     label: "Results",
-    shortDescription: "Enter & release",
+    shortDescription: "Entry & reports",
     icon: Activity,
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    shortDescription: "Lab profile",
+    icon: Settings,
   },
 ];
 
+/** Catalogue & users: administrator / super-administrator only (see permissions). */
 const MORE_ITEMS: NavItem[] = [
   {
     href: "/results/verify",
-    label: "Verify results",
-    shortDescription: "Scientist sign-off",
+    label: "Authorization queue",
+    shortDescription: "Pending sign-off",
     icon: ClipboardCheck,
   },
   {
@@ -81,28 +89,22 @@ const MORE_ITEMS: NavItem[] = [
     icon: FileBarChart,
   },
   {
-    href: "/billing",
-    label: "Billing",
-    shortDescription: "Invoices",
-    icon: Receipt,
+    href: "/catalogue",
+    label: "Tests & catalogue",
+    shortDescription: "Panels & pricing",
+    icon: FlaskConical,
+  },
+  {
+    href: "/users",
+    label: "User management",
+    shortDescription: "Staff accounts",
+    icon: UserCog,
   },
   {
     href: "/interoperability",
     label: "FHIR export",
     shortDescription: "For IT / EHR",
     icon: Network,
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    shortDescription: "Lab profile",
-    icon: Settings,
-  },
-  {
-    href: "/users",
-    label: "Users",
-    shortDescription: "Who can sign in",
-    icon: UserCog,
   },
 ];
 
@@ -149,7 +151,7 @@ export function SidebarNav({ role }: { role: UserRole }) {
       </div>
 
       <p className="px-2.5 pb-1 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/45">
-        Everyday
+        Menu
       </p>
       {PRIMARY_ITEMS.map((item) => renderLink(role, pathname, item))}
 
@@ -165,7 +167,7 @@ export function SidebarNav({ role }: { role: UserRole }) {
               moreOpen && "rotate-180",
             )}
           />
-          More tools
+          More
         </CollapsibleTrigger>
         <CollapsibleContent className="flex flex-col gap-0.5 pt-0.5 data-[ending-style]:animate-none">
           {MORE_ITEMS.map((item) => renderLink(role, pathname, item))}

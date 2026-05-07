@@ -3,14 +3,19 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
 import { canVerifyResults } from "@/lib/permissions";
+import { LabLoader } from "@/components/ui/lab-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 export default function ResultsVerifyPage() {
-  const { store } = useData();
+  const { store, hydrated } = useData();
   const { user } = useAuth();
+
+  if (!hydrated) {
+    return <LabLoader message="Loading authorization queue…" />;
+  }
 
   const rows = store.orders.filter(
     (o) =>
@@ -21,14 +26,14 @@ export default function ResultsVerifyPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Result verification queue</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Authorization queue</h1>
         <p className="text-sm text-muted-foreground">
-          Orders awaiting laboratory scientist sign-off.
+          Results waiting for laboratory authorization before release.
         </p>
       </div>
       {user && !canVerifyResults(user.role) && (
         <p className="text-sm text-muted-foreground">
-          Your role can view this list but cannot verify in the workspace.
+          Your role can view this list but cannot authorize in the workspace.
         </p>
       )}
 

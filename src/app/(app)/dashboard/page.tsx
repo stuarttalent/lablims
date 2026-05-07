@@ -7,6 +7,7 @@ import {
   canCreateOrder,
   canCreatePatient,
   canManageBilling,
+  hasAdminPrivileges,
   canVerifyResults,
 } from "@/lib/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LabLoader } from "@/components/ui/lab-loader";
 import { format } from "date-fns";
 import {
   Area,
@@ -58,14 +59,7 @@ export default function DashboardPage() {
 
   if (!hydrated) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full max-w-xl" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
-        </div>
-      </div>
+      <LabLoader className="min-h-[50vh]" message="Syncing laboratory data…" />
     );
   }
 
@@ -390,17 +384,19 @@ function QuickActions({ role }: { role: UserRole }) {
     hint: "Open orders to enter values",
     icon: FlaskConical,
   });
-  actions.push({
-    href: "/catalogue",
-    title: "Test list",
-    hint: "See panels & prices",
-    icon: TestTube,
-  });
+  if (hasAdminPrivileges(role)) {
+    actions.push({
+      href: "/catalogue",
+      title: "Test list",
+      hint: "See panels & prices",
+      icon: TestTube,
+    });
+  }
   if (canVerifyResults(role)) {
     actions.push({
       href: "/results/verify",
-      title: "Verify results",
-      hint: "Scientist sign-off",
+      title: "Authorization queue",
+      hint: "Sign off pending results",
       icon: ClipboardCheck,
     });
   }

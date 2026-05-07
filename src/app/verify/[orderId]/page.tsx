@@ -14,14 +14,15 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { CheckCircle2, FlaskConical, HelpCircle, Shield } from "lucide-react";
+import { LabLoader } from "@/components/ui/lab-loader";
 import { verifyResultToken } from "@/lib/verification-token";
 
 export default function PublicVerifyPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-muted/40 text-sm text-muted-foreground">
-          Loading…
+        <div className="flex min-h-screen items-center justify-center bg-muted/40">
+          <LabLoader message="Verifying report…" />
         </div>
       }
     >
@@ -66,8 +67,8 @@ function PublicVerifyInner() {
 
   if (!hydrated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/40 text-sm text-muted-foreground">
-        Loading…
+      <div className="flex min-h-screen items-center justify-center bg-muted/40">
+        <LabLoader message="Loading verification…" />
       </div>
     );
   }

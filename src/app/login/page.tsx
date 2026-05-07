@@ -27,6 +27,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const ROLE_ORDER: UserRole[] = [
+  "super_admin",
   "admin",
   "scientist",
   "tech",
@@ -35,8 +36,9 @@ const ROLE_ORDER: UserRole[] = [
 ];
 
 const ROLE_HINT: Record<UserRole, string> = {
+  super_admin: "Highest access — all areas including users and catalogue.",
   admin: "Full access — users, reports, settings.",
-  scientist: "Verify and edit results; clinical oversight.",
+  scientist: "Authorize and edit results; clinical oversight.",
   tech: "Enter results and follow assigned work.",
   biller: "Invoices, payments, and receivables.",
   doctor: "Request tests and review released results.",

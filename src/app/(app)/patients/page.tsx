@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserPlus, Search } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LabLoader } from "@/components/ui/lab-loader";
 
 export default function PatientsPage() {
   const { store, hydrated } = useData();
@@ -41,7 +41,7 @@ export default function PatientsPage() {
   }, [store.patients, q]);
 
   if (!hydrated || !user) {
-    return <Skeleton className="h-96 w-full rounded-xl" />;
+    return <LabLoader message="Opening patient registry…" />;
   }
 
   return (

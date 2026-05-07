@@ -3,12 +3,8 @@
 import { getTestById } from "@/data/catalogue";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
-import {
-  canEnterResults,
-  canReleaseResults,
-  canVerifyResults,
-} from "@/lib/permissions";
-import type { LineResultStatus, ResultFlag } from "@/types";
+import { canEnterResults, canVerifyResults } from "@/lib/permissions";
+import type { LineResultStatus, OrderStatus, ResultFlag } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +25,24 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 const FLAGS: ResultFlag[] = ["Normal", "Low", "High", "Critical"];
+
+function lineStatusLabel(s: LineResultStatus | undefined): string {
+  if (s === "Pending Verification") return "Pending authorization";
+  return s ?? "Draft";
+}
+
+function syncOrderStatusFromLines(
+  lines: { resultStatus?: LineResultStatus }[],
+): OrderStatus {
+  if (lines.length === 0) return "In Progress";
+  if (lines.every((l) => l.resultStatus === "Released")) return "Released";
+  if (lines.some((l) => l.resultStatus === "Pending Verification")) {
+    return "Pending Verification";
+  }
+  if (lines.some((l) => l.resultStatus === "Verified")) return "Verified";
+  if (lines.some((l) => l.resultStatus === "Released")) return "Verified";
+  return "In Progress";
+}
 
 export default function ResultsWorkspacePage() {
   const params = useParams<{ orderId: string }>();
@@ -92,7 +106,9 @@ export default function ResultsWorkspacePage() {
                       {meta?.department} · {meta?.sampleType}
                     </p>
                   </div>
-                  <Badge variant="secondary">{line.resultStatus ?? "Draft"}</Badge>
+                  <Badge variant="secondary">
+                    {lineStatusLabel(line.resultStatus)}
+                  </Badge>
                 </div>
 
                 <div
@@ -177,11 +193,19 @@ export default function ResultsWorkspacePage() {
                     />
                   </div>
                   <div className="sm:col-span-2 text-xs text-muted-foreground space-y-1">
-                    <p>Entered by: {line.enteredBy ?? "—"}</p>
                     <p>
-                      Verified by: {line.verifiedBy ?? "—"}{" "}
+                      Entered by: {line.enteredBy ?? "—"}
+                      {line.enteredByCredential
+                        ? ` (${line.enteredByCredential})`
+                        : ""}
+                    </p>
+                    <p>
+                      Authorized by: {line.verifiedBy ?? "—"}
+                      {line.verifiedByCredential
+                        ? ` (${line.verifiedByCredential})`
+                        : ""}
                       {line.verificationDate
-                        ? `on ${line.verificationDate}`
+                        ? ` · ${line.verificationDate}`
                         : ""}
                     </p>
                   </div>
@@ -198,11 +222,12 @@ export default function ResultsWorkspacePage() {
                             updateOrderLine(order.id, line.testId, {
                               resultStatus: "Draft",
                               enteredBy: user.name,
+                              enteredByCredential: user.professionalCredential,
                             });
                             toast.message("Draft saved");
                           }}
                         >
-                          Save draft
+                          Save entered result
                         </Button>
                         <Button
                           size="sm"
@@ -210,60 +235,68 @@ export default function ResultsWorkspacePage() {
                             updateOrderLine(order.id, line.testId, {
                               resultStatus: "Pending Verification",
                               enteredBy: user.name,
+                              enteredByCredential: user.professionalCredential,
                             });
+                            const next = order.tests.map((l) =>
+                              l.testId === line.testId
+                                ? {
+                                    ...l,
+                                    resultStatus:
+                                      "Pending Verification" as LineResultStatus,
+                                    enteredBy: user.name,
+                                    enteredByCredential:
+                                      user.professionalCredential,
+                                  }
+                                : l,
+                            );
                             updateOrder(order.id, {
-                              status: "Pending Verification",
+                              status: syncOrderStatusFromLines(next),
                             });
-                            toast.success("Submitted for verification.");
+                            toast.success("Submitted for authorization.");
                           }}
                         >
-                          Submit for verification
+                          Submit for authorization
                         </Button>
                       </>
                     )}
-                    {canVerifyResults(user.role) && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          updateOrderLine(order.id, line.testId, {
-                            resultStatus: "Verified",
-                            verifiedBy: user.name,
-                            verificationDate: new Date()
+                    {canVerifyResults(user.role) &&
+                      line.resultStatus === "Pending Verification" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            const verifiedBy = user.name;
+                            const verifiedByCredential =
+                              user.professionalCredential;
+                            const verificationDate = new Date()
                               .toISOString()
-                              .slice(0, 10),
-                          });
-                          updateOrder(order.id, { status: "Verified" });
-                          toast.success("Result verified.");
-                        }}
-                      >
-                        Verify
-                      </Button>
-                    )}
-                    {canReleaseResults(user.role) && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          updateOrderLine(order.id, line.testId, {
-                            resultStatus: "Released",
-                          });
-                          const next = order.tests.map((l) =>
-                            l.testId === line.testId
-                              ? {
-                                  ...l,
-                                  resultStatus: "Released" as LineResultStatus,
-                                }
-                              : l,
-                          );
-                          if (next.every((l) => l.resultStatus === "Released")) {
-                            updateOrder(order.id, { status: "Released" });
-                          }
-                          toast.success("Result released to ordering clinician.");
-                        }}
-                      >
-                        Release
-                      </Button>
-                    )}
+                              .slice(0, 10);
+                            updateOrderLine(order.id, line.testId, {
+                              resultStatus: "Released",
+                              verifiedBy,
+                              verifiedByCredential,
+                              verificationDate,
+                            });
+                            const next = order.tests.map((l) =>
+                              l.testId === line.testId
+                                ? {
+                                    ...l,
+                                    resultStatus: "Released" as LineResultStatus,
+                                    verifiedBy,
+                                    verifiedByCredential,
+                                    verificationDate,
+                                  }
+                                : l,
+                            );
+                            updateOrder(order.id, {
+                              status: syncOrderStatusFromLines(next),
+                            });
+                            toast.success("Result authorized and released.");
+                          }}
+                        >
+                          Authorize
+                        </Button>
+                      )}
                   </div>
                 )}
               </div>

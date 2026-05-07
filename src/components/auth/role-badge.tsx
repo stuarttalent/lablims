@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Shield } from "lucide-react";
 
 const ROLE_COLORS: Record<UserRole, string> = {
+  super_admin:
+    "bg-violet-700/15 text-violet-900 dark:text-violet-100 border-violet-500/40",
   admin: "bg-violet-600/15 text-violet-800 dark:text-violet-200 border-violet-500/30",
   scientist: "bg-sky-600/15 text-sky-900 dark:text-sky-100 border-sky-500/35",
   tech: "bg-emerald-600/15 text-emerald-900 dark:text-emerald-100 border-emerald-500/35",
