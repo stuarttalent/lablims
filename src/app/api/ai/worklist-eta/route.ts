@@ -1,6 +1,7 @@
 import {
   buildHeuristicWorklistPredictions,
   enrichOrdersForEtaApi,
+  parsePunctualityToken,
   type WorklistEtaPrediction,
 } from "@/lib/worklist-eta";
 import type { LabOrder } from "@/types";
@@ -8,11 +9,18 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-type NotesPayload = { notes?: { orderId: string; note: string }[] };
+type AiNoteRow = {
+  orderId: string;
+  note?: string;
+  punctuality?: string;
+  punctualityDetail?: string;
+};
+
+type NotesPayload = { notes?: AiNoteRow[] };
 
 async function openAiNotes(
   payload: string,
-): Promise<{ orderId: string; note: string }[] | null> {
+): Promise<AiNoteRow[] | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
 
@@ -25,13 +33,18 @@ async function openAiNotes(
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
       temperature: 0.2,
-      max_tokens: 1200,
+      max_tokens: 1600,
       messages: [
         {
           role: "system",
-          content: `You assist laboratory operations. Staff already computed each order's expected result-ready time (readyIso) from catalogue turnaround times: the longest single test TAT in the panel (parallel workflow), scaled for priority (STAT faster, Urgent somewhat faster).
-Write one concise sentence per order (max 28 words) explaining that ETA for bench staff — reference the controlling test or longest TAT when helpful. Do NOT invent different times; do NOT contradict readyIso.
-Output ONLY valid JSON: {"notes":[{"orderId":"string","note":"string"}]} with exactly one entry per order in the user message.`,
+          content: `You assist laboratory operations.
+
+For each order in the user JSON you must output:
+- note: one concise sentence (max 28 words) explaining the ETA — reference controlling test / TAT when helpful. Do NOT contradict computedReadyIso.
+- punctuality: exactly one of "on_time", "warning", "late" — based on comparing currentTimeIso to computedReadyIso AND order status/priority (STAT may warrant "warning" if tight). "late" if clearly past due; "warning" if within roughly 2 hours of deadline or risky; otherwise "on_time".
+- punctualityDetail: one short sentence (max 22 words) explaining the punctuality call for bench staff.
+
+Output ONLY valid JSON: {"notes":[{"orderId":"string","note":"string","punctuality":"on_time|warning|late","punctualityDetail":"string"}]} — one entry per order.`,
         },
         {
           role: "user",
@@ -81,13 +94,16 @@ export async function POST(req: Request) {
     const heuristic = buildHeuristicWorklistPredictions(orders);
 
     const userPayload = JSON.stringify(
-      enriched.orders.map((o, i) => ({
-        ...o,
-        computedReadyIso: enriched.baselines[i]?.readyIso,
-        controllingTest: enriched.baselines[i]?.controllingTest,
-        catalogueHoursNominal: enriched.baselines[i]?.catalogueHoursRaw,
-        hoursAfterPriority: enriched.baselines[i]?.hoursAfterPriority,
-      })),
+      {
+        currentTimeIso: new Date().toISOString(),
+        orders: enriched.orders.map((o, i) => ({
+          ...o,
+          computedReadyIso: enriched.baselines[i]?.readyIso,
+          controllingTest: enriched.baselines[i]?.controllingTest,
+          catalogueHoursNominal: enriched.baselines[i]?.catalogueHoursRaw,
+          hoursAfterPriority: enriched.baselines[i]?.hoursAfterPriority,
+        })),
+      },
       null,
       2,
     );
@@ -98,12 +114,17 @@ export async function POST(req: Request) {
     try {
       const aiNotes = await openAiNotes(userPayload);
       if (aiNotes?.length) {
-        const noteById = new Map(aiNotes.map((n) => [n.orderId, n.note]));
+        const rowById = new Map(aiNotes.map((n) => [n.orderId, n]));
         predictions = heuristic.map((h) => {
-          const ai = noteById.get(h.orderId);
-          return ai?.trim()
-            ? { ...h, note: ai.trim() }
-            : h;
+          const ai = rowById.get(h.orderId);
+          if (!ai) return h;
+          const punc = parsePunctualityToken(ai.punctuality);
+          return {
+            ...h,
+            note: ai.note?.trim() || h.note,
+            punctualityAi: punc,
+            punctualityAiDetail: ai.punctualityDetail?.trim() || null,
+          };
         });
         source = "openai";
       }

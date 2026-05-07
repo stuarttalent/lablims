@@ -5,7 +5,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { canCreateOrder } from "@/lib/permissions";
 import {
   buildHeuristicWorklistPredictions,
+  computeSchedulePunctuality,
+  heuristicPunctualityNote,
+  mergePunctuality,
   type WorklistEtaPrediction,
+  type WorklistPunctuality,
 } from "@/lib/worklist-eta";
 import { isOrderTatComplete } from "@/lib/tat-predict";
 import { Button } from "@/components/ui/button";
@@ -29,11 +33,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export default function OrdersPage() {
   const { store } = useData();
   const { user } = useAuth();
   const [q, setQ] = useState("");
+  const [tick, setTick] = useState(0);
   const [aiEtaBatch, setAiEtaBatch] = useState<{
     sig: string;
     list: WorklistEtaPrediction[];
@@ -114,10 +120,36 @@ export default function OrdersPage() {
     return () => ac.abort();
   }, [worklistRowSig, rows]);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTick((n) => n + 1);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const predById = useMemo(
     () => new Map(predictions.map((p) => [p.orderId, p])),
     [predictions],
   );
+
+  void tick;
+
+  const puncLabel: Record<WorklistPunctuality, string> = {
+    on_time: "On time",
+    warning: "Warning",
+    late: "Late",
+  };
+
+  function punctualityButtonClass(level: WorklistPunctuality): string {
+    switch (level) {
+      case "late":
+        return "bg-red-600 text-white hover:bg-red-700 shadow-sm border-0";
+      case "warning":
+        return "bg-amber-500 text-white hover:bg-amber-600 shadow-sm border-0";
+      default:
+        return "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm border-0";
+    }
+  }
 
   function formatReady(iso: string): string {
     try {
@@ -132,10 +164,11 @@ export default function OrdersPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Worklist</h1>
-          <p className="text-sm text-muted-foreground max-w-xl">
+          <p className="text-sm text-muted-foreground max-w-2xl">
             Each row is one lab request. <span className="inline-flex items-center gap-1 font-medium text-foreground/90"><Sparkles className="size-3.5 text-violet-500" /> Est. ready</span> uses
-            catalogue turnaround times (longest test in the panel, parallel workflow) with
-            priority weighting; AI adds a one-line explanation when configured.
+            catalogue TAT (parallel panel);{" "}
+            <span className="font-medium text-foreground/90">vs ETA</span> compares the clock to
+            that estimate (AI enriches when configured). Colours update about every minute.
           </p>
         </div>
         {user && canCreateOrder(user.role) ? (
@@ -161,7 +194,7 @@ export default function OrdersPage() {
             {etaSource === "openai" ? (
               <Badge variant="outline" className="gap-1 text-[10px] font-normal">
                 <Sparkles className="size-3" />
-                AI notes on
+                {"AI ETA & vs ETA"}
               </Badge>
             ) : baselinePredictions.length > 0 &&
               rows.some((o) => !isOrderTatComplete(o.status)) ? (
@@ -192,6 +225,12 @@ export default function OrdersPage() {
                       Est. ready
                     </span>
                   </TableHead>
+                  <TableHead className="hidden lg:table-cell min-w-[7.5rem]">
+                    <span className="inline-flex items-center gap-1">
+                      <Sparkles className="size-3.5 text-violet-500 opacity-80" />
+                      vs ETA
+                    </span>
+                  </TableHead>
                   <TableHead className="text-right">Open</TableHead>
                 </TableRow>
               </TableHeader>
@@ -199,7 +238,7 @@ export default function OrdersPage() {
                 {rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="h-24 text-center text-sm text-muted-foreground"
                     >
                       No orders to show.
@@ -210,6 +249,26 @@ export default function OrdersPage() {
                     const patient = store.patients.find((p) => p.id === o.patientId);
                     const pred = predById.get(o.id);
                     const complete = isOrderTatComplete(o.status);
+                    const sched =
+                      pred && !complete
+                        ? computeSchedulePunctuality(
+                            o.collectionDate,
+                            pred.readyIso,
+                          )
+                        : null;
+                    const level =
+                      sched && pred
+                        ? mergePunctuality(sched, pred.punctualityAi)
+                        : null;
+                    const puncTip =
+                      pred && sched
+                        ? [
+                            heuristicPunctualityNote(sched, pred.readyIso),
+                            pred.punctualityAiDetail?.trim(),
+                          ]
+                            .filter(Boolean)
+                            .join("\n\n")
+                        : "";
                     return (
                       <TableRow key={o.id}>
                         <TableCell className="font-mono text-xs">{o.id}</TableCell>
@@ -246,6 +305,29 @@ export default function OrdersPage() {
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </TableCell>
+                        <TableCell className="hidden lg:table-cell align-top">
+                          {complete || !pred || !level ? (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                className={cn(
+                                  "inline-flex h-8 min-w-[5.5rem] cursor-help items-center justify-center rounded-md px-2.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                  punctualityButtonClass(level),
+                                )}
+                              >
+                                {puncLabel[level]}
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                className="max-w-xs text-left text-xs leading-snug"
+                              >
+                                {puncTip}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button asChild size="sm" variant="outline">
                             <Link href={`/orders/${o.id}`}>View</Link>
@@ -259,8 +341,8 @@ export default function OrdersPage() {
             </Table>
           </div>
           <p className="text-[11px] text-muted-foreground lg:hidden">
-            <Sparkles className="inline size-3 text-violet-500" /> Est. ready appears on
-            wider screens; open an order for full detail.
+            <Sparkles className="inline size-3 text-violet-500" /> Est. ready and vs ETA
+            columns appear on wider screens; open an order for full detail.
           </p>
         </CardContent>
       </Card>
