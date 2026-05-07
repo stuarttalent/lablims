@@ -35,6 +35,31 @@ export interface CatalogueTest {
   units?: string;
 }
 
+/** Gender scope for reference-interval bands (patient gender is normalized to these). */
+export type CatalogueGenderScope = "all" | "male" | "female" | "other";
+
+/** One age/gender band for a reference interval (first matching band wins). */
+export interface ReferenceRangeBand {
+  minAgeYears?: number;
+  maxAgeYears?: number;
+  genders: CatalogueGenderScope[];
+  rangeText: string;
+}
+
+/** Auto-suggest line comments when result matches flag and/or value substring. */
+export interface ResultCommentRule {
+  id: string;
+  flag?: ResultFlag;
+  valueContains?: string;
+  comment: string;
+}
+
+/** Stored per test id in settings — extends catalogue without editing code. */
+export interface CatalogueTestOverride {
+  referenceBands?: ReferenceRangeBand[];
+  defaultCommentRules?: ResultCommentRule[];
+}
+
 export interface Patient {
   id: string;
   fullName: string;
@@ -98,6 +123,12 @@ export interface LabOrder {
   collectionDate: string;
   status: OrderStatus;
   notes?: string;
+  /** Clinical narrative for this encounter — used in AI summary and audit context. */
+  clinicalSymptoms?: string;
+  /** Last model-generated narrative (user chooses whether it appears on slip). */
+  aiGeneratedComment?: string;
+  /** When true, slip and PDF include `aiGeneratedComment` in the report. */
+  includeAiCommentInReport?: boolean;
   assignedTechId?: string;
   assignedScientistId?: string;
   createdAt: string;
@@ -148,6 +179,8 @@ export interface LabSettings {
   limsInstanceId?: string;
   /** Optional logo for reports (data URL, e.g. PNG). */
   logoDataUrl?: string;
+  /** Per-test rules: age/gender reference bands & default comment templates. */
+  catalogueOverrides: Record<string, CatalogueTestOverride>;
 }
 
 export interface DemoStore {

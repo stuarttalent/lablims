@@ -86,7 +86,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     startTransition(() => {
       const defaults = createInitialStore();
       if (saved) {
-        const settings = { ...defaults.settings, ...saved.settings };
+        const settings = {
+          ...defaults.settings,
+          ...saved.settings,
+          catalogueOverrides: {
+            ...defaults.settings.catalogueOverrides,
+            ...(saved.settings.catalogueOverrides ?? {}),
+          },
+        };
         let next: DemoStore = { ...saved, settings };
         if (!settings.limsInstanceId) {
           const limsInstanceId = crypto.randomUUID();

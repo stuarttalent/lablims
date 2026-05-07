@@ -198,6 +198,7 @@ export const DEMO_ORDERS: LabOrder[] = [
     requestingDoctor: "Dr. Rudo Chikwanha",
     collectionDate: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0)),
     status: "Pending Verification",
+    clinicalSymptoms: "Progressive fatigue, occasional gum bleeding.",
     assignedTechId: "u-tech",
     assignedScientistId: "u-scientist",
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15)),
@@ -446,6 +447,7 @@ const DEFAULT_SETTINGS = (): DemoStore["settings"] => ({
   ],
   fhirBaseUrl: "https://fhir.metropolitanclinlab.org/R4",
   fhirOrganizationId: "lab-main",
+  catalogueOverrides: {},
 });
 
 export function createInitialStore(): DemoStore {

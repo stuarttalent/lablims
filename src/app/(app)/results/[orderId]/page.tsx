@@ -4,6 +4,11 @@ import { getTestById } from "@/data/catalogue";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
 import { canEnterResults, canVerifyResults } from "@/lib/permissions";
+import {
+  defaultCommentsForLine,
+  resolveReferenceRangeForPatient,
+} from "@/lib/catalogue-rules";
+import { orderToAiCommentPayload } from "@/lib/ai-result-comment";
 import type { LineResultStatus, OrderStatus, ResultFlag } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { Sparkles } from "lucide-react";
 
 const FLAGS: ResultFlag[] = ["Normal", "Low", "High", "Critical"];
 
@@ -48,12 +56,60 @@ export default function ResultsWorkspacePage() {
   const params = useParams<{ orderId: string }>();
   const { store, updateOrderLine, updateOrder } = useData();
   const { user } = useAuth();
+  const [aiBusy, setAiBusy] = useState(false);
   const order = store.orders.find((o) => o.id === params.orderId);
 
   if (!order) notFound();
 
   const patient = store.patients.find((p) => p.id === order.patientId);
   const readOnly = user?.role === "doctor";
+
+  async function generateAiComment() {
+    if (!order) return;
+    setAiBusy(true);
+    try {
+      const payload = orderToAiCommentPayload(order, patient);
+      const res = await fetch("/api/ai/result-comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = (await res.json()) as { comment?: string; source?: string; error?: string };
+      if (!res.ok || !data.comment) {
+        toast.error(data.error ?? "Could not generate comment.");
+        return;
+      }
+      updateOrder(order.id, { aiGeneratedComment: data.comment });
+      toast.success(
+        data.source === "openai"
+          ? "AI narrative generated."
+          : "Narrative generated (offline template — set OPENAI_API_KEY for full AI).",
+      );
+    } catch {
+      toast.error("Generation failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function applyCatalogueCommentsToAll() {
+    if (!order) return;
+    let n = 0;
+    for (const line of order.tests) {
+      const additions = defaultCommentsForLine(line.testId, line, store.settings);
+      if (additions.length === 0) continue;
+      const block = additions.join("\n");
+      const cur = line.comment?.trim() ?? "";
+      const merged =
+        !cur ? block : block.split("\n").every((p) => cur.includes(p)) ? cur : `${cur}\n${block}`;
+      if (merged !== cur) {
+        updateOrderLine(order.id, line.testId, { comment: merged });
+        n += 1;
+      }
+    }
+    if (n === 0) toast.message("No matching catalogue rules for current results.");
+    else toast.success(`Updated comments on ${n} analyte(s).`);
+  }
 
   return (
     <div className="space-y-4 max-w-4xl">
@@ -83,13 +139,97 @@ export default function ResultsWorkspacePage() {
         </p>
       )}
 
+      <Card className="border-border/70 shadow-sm border-violet-500/20 bg-violet-50/20 dark:bg-violet-950/15">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Clinical context</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label htmlFor="clinical-sx">Symptoms &amp; clinical indication</Label>
+          <Textarea
+            id="clinical-sx"
+            rows={3}
+            disabled={readOnly}
+            placeholder="e.g. polyuria, weight loss, screening for diabetes…"
+            value={order.clinicalSymptoms ?? ""}
+            onChange={(e) =>
+              updateOrder(order.id, { clinicalSymptoms: e.target.value || undefined })
+            }
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Feeds the optional AI interpretive summary. Turn on “Include on result slip” in the
+            AI section to print it on reports.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 shadow-sm border-teal-500/20 bg-teal-50/15 dark:bg-teal-950/15">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="size-4 text-teal-600" />
+            AI overall comment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Generated from patient demographics, clinical symptoms, order notes, and entered
+            results. You choose whether it appears on the printed / PDF slip.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={readOnly || aiBusy}
+              onClick={() => void generateAiComment()}
+            >
+              {aiBusy ? "Generating…" : "Generate with AI"}
+            </Button>
+            {order.aiGeneratedComment ? (
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <Checkbox
+                  disabled={readOnly}
+                  checked={!!order.includeAiCommentInReport}
+                  onCheckedChange={(c) =>
+                    updateOrder(order.id, { includeAiCommentInReport: c === true })
+                  }
+                />
+                Include on result slip &amp; export
+              </label>
+            ) : null}
+          </div>
+          {order.aiGeneratedComment ? (
+            <Textarea
+              className="text-sm font-normal min-h-[100px]"
+              readOnly={readOnly}
+              value={order.aiGeneratedComment}
+              onChange={(e) =>
+                updateOrder(order.id, { aiGeneratedComment: e.target.value || undefined })
+              }
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              No generated narrative yet. Enter results and clinical symptoms, then generate.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="border-border/70 shadow-sm">
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2">
           <CardTitle className="text-base">Analytes</CardTitle>
+          {!readOnly && user && canEnterResults(user.role) && (
+            <Button type="button" size="sm" variant="secondary" onClick={applyCatalogueCommentsToAll}>
+              Apply catalogue comment rules
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           {order.tests.map((line, idx) => {
             const meta = getTestById(line.testId);
+            const suggestedRef = resolveReferenceRangeForPatient(
+              line.testId,
+              patient,
+              store.settings,
+            );
             const abnormal =
               line.flag && line.flag !== "Normal"
                 ? line.flag === "Critical"
@@ -155,6 +295,28 @@ export default function ResultsWorkspacePage() {
                         })
                       }
                     />
+                    {patient && suggestedRef ? (
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="line-clamp-2">
+                          Suggested for {patient.fullName} ({patient.gender}, {patient.age}y):{" "}
+                          <span className="text-foreground">{suggestedRef}</span>
+                        </span>
+                        {!readOnly && user && canEnterResults(user.role) ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0 text-xs"
+                            onClick={() =>
+                              updateOrderLine(order.id, line.testId, {
+                                referenceRange: suggestedRef,
+                              })
+                            }
+                          >
+                            Apply
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Flag</Label>
@@ -191,6 +353,37 @@ export default function ResultsWorkspacePage() {
                         })
                       }
                     />
+                    {!readOnly && user && canEnterResults(user.role) ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          const additions = defaultCommentsForLine(
+                            line.testId,
+                            line,
+                            store.settings,
+                          );
+                          if (additions.length === 0) {
+                            toast.message("No rules matched this result.");
+                            return;
+                          }
+                          const block = additions.join("\n");
+                          const cur = line.comment?.trim() ?? "";
+                          const merged =
+                            !cur
+                              ? block
+                              : block.split("\n").every((p) => cur.includes(p))
+                                ? cur
+                                : `${cur}\n${block}`;
+                          updateOrderLine(order.id, line.testId, { comment: merged });
+                          toast.message("Catalogue comments merged.");
+                        }}
+                      >
+                        Insert matching catalogue comments
+                      </Button>
+                    ) : null}
                   </div>
                   <div className="sm:col-span-2 text-xs text-muted-foreground space-y-1">
                     <p>

@@ -17,6 +17,7 @@ import {
   Network,
   Receipt,
   Settings,
+  Settings2,
   Stethoscope,
   UserCog,
   Users,
@@ -95,6 +96,12 @@ const MORE_ITEMS: NavItem[] = [
     icon: FlaskConical,
   },
   {
+    href: "/catalogue/edit",
+    label: "Configure tests",
+    shortDescription: "Ranges & comments",
+    icon: Settings2,
+  },
+  {
     href: "/users",
     label: "User management",
     shortDescription: "Staff accounts",
@@ -109,6 +116,7 @@ const MORE_ITEMS: NavItem[] = [
 ];
 
 function pathIsActive(pathname: string, href: string): boolean {
+  if (href === "/catalogue" && pathname.startsWith("/catalogue/edit")) return false;
   if (href === "/results") {
     if (pathname.startsWith("/results/verify")) return false;
     return pathname === "/results" || pathname.startsWith("/results/");

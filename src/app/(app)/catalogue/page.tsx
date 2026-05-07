@@ -2,12 +2,16 @@
 
 import { catalogueWithPrices } from "@/lib/pricing";
 import { useData } from "@/contexts/data-context";
+import { useAuth } from "@/contexts/auth-context";
+import { hasAdminPrivileges } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 import type { TestDepartment } from "@/types";
 import { FlaskConical, Search } from "lucide-react";
+import Link from "next/link";
 
 const DEPT_ORDER: TestDepartment[] = [
   "Haematology",
@@ -19,6 +23,8 @@ const DEPT_ORDER: TestDepartment[] = [
 
 export default function CataloguePage() {
   const { store } = useData();
+  const { user } = useAuth();
+  const canConfigure = user && hasAdminPrivileges(user.role);
   const [q, setQ] = useState("");
   const rows = useMemo(() => {
     const list = catalogueWithPrices(store.settings);
@@ -46,12 +52,19 @@ export default function CataloguePage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Available tests</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          What your lab offers, sample types, and current price list.
-          LOINC codes appear for technical use; ranges are illustrative only.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Available tests</h1>
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            What your lab offers, sample types, and current price list.
+            LOINC codes appear for technical use; ranges are illustrative only.
+          </p>
+        </div>
+        {canConfigure ? (
+          <Button variant="secondary" asChild>
+            <Link href="/catalogue/edit">Configure tests</Link>
+          </Button>
+        ) : null}
       </div>
       <div className="relative max-w-md">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
