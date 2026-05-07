@@ -90,7 +90,11 @@ function InteroperabilityInner() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Structured laboratory data aligned with{" "}
+            <span className="text-foreground/90 font-medium">
+              Mostly for IT, interface engines, and EHR teams
+            </span>{" "}
+            — not required for routine specimen or result entry. Structured
+            laboratory data aligned with{" "}
             <strong>HL7 FHIR Release 4</strong> resource patterns (Patient,
             Organization, ServiceRequest, Observation, DiagnosticReport). LOINC
             codes from the catalogue are emitted in{" "}

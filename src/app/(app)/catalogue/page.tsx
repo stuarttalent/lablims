@@ -48,10 +48,10 @@ export default function CataloguePage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Test catalogue</h1>
-        <p className="text-sm text-muted-foreground">
-          Orderable tests with LOINC codes for FHIR <code className="text-xs font-mono bg-muted px-1 rounded">Observation.code</code>.
-          Reference ranges are illustrative for this demo.
+        <h1 className="text-2xl font-semibold tracking-tight">Available tests</h1>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          What your lab offers, sample types, and price hints for this demo.
+          LOINC codes appear for technical use; ranges are illustrative only.
         </p>
       </div>
       <DemoDisclaimer variant="compact" />

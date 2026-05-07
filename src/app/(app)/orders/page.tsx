@@ -47,9 +47,10 @@ export default function OrdersPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Test requests</h1>
-          <p className="text-sm text-muted-foreground">
-            Create orders, track collection, and manage workflow states.
+          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
+          <p className="text-sm text-muted-foreground max-w-xl">
+            Each row is one lab request. Open it to see status, assign work, or
+            add clinical notes.
           </p>
         </div>
         {user && canCreateOrder(user.role) ? (

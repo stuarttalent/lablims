@@ -24,8 +24,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
           <SidebarNav role={user.role} />
           <div className="mt-auto p-3 text-[10px] leading-relaxed text-sidebar-foreground/60 border-t border-sidebar-border">
-            Role-based access. HL7 FHIR R4 JSON exports available under
-            Interoperability.
+            Demo only — your view matches your role. Advanced options live under
+            More tools.
           </div>
         </aside>
 
@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       );
                     }
                   }}
-                  placeholder="Search patient records (Enter)…"
+                  placeholder="Find a patient (name or ID, Enter)…"
                   className="pl-9 h-9 bg-background border-input"
                 />
               </div>
@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       );
                     }
                   }}
-                  placeholder="Search patients…"
+                  placeholder="Find a patient…"
                   className="pl-9 h-9"
                 />
               </div>

@@ -50,8 +50,11 @@ export default function PatientsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
-          <p className="text-sm text-muted-foreground">
-            Search, register, and open patient profiles (demo-only records).
+          <p className="text-sm text-muted-foreground max-w-xl">
+            Look someone up or open their chart. New people use{" "}
+            <span className="font-medium text-foreground/90">Add patient</span>{" "}
+            or <span className="font-medium text-foreground/90">Quick actions</span>{" "}
+            on Home.
           </p>
         </div>
         {canCreatePatient(user.role) ? (

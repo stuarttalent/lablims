@@ -41,8 +41,10 @@ export default function ResultsIndexPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Results</h1>
-        <p className="text-sm text-muted-foreground">
-          Open an order to capture analytes, verify, and release reports.
+        <p className="text-sm text-muted-foreground max-w-xl">
+          Choose an order to type in results and send the report. Day-to-day
+          work stays on this page; scientist sign-off is under{" "}
+          <span className="font-medium text-foreground/90">More tools</span>.
         </p>
       </div>
       <DemoDisclaimer variant="compact" />
