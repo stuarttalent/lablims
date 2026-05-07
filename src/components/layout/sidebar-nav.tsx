@@ -12,6 +12,7 @@ import {
   FileBarChart,
   FlaskConical,
   LayoutDashboard,
+  Network,
   Receipt,
   Settings,
   Stethoscope,
@@ -29,6 +30,7 @@ const ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/patients", label: "Patients", icon: Users },
   { href: "/catalogue", label: "Test catalogue", icon: FlaskConical },
+  { href: "/interoperability", label: "FHIR / Interop", icon: Network },
   { href: "/orders", label: "Test requests", icon: ClipboardList },
   { href: "/billing", label: "Billing", icon: Receipt },
   { href: "/results", label: "Results", icon: Activity },
@@ -44,18 +46,24 @@ export function SidebarNav({ role }: { role: UserRole }) {
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3">
       <div className="mb-3 flex items-center gap-2 px-2">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
           <Stethoscope className="size-5" />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight">LabLIMS</p>
-          <p className="text-[11px] text-muted-foreground">Clinical workspace</p>
+          <p className="text-sm font-semibold tracking-tight text-sidebar-foreground">
+            LabLIMS
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60">
+            Laboratory · LIS
+          </p>
         </div>
       </div>
       {ITEMS.map((item) => {
         const allowed = canAccessRoute(role, item.href);
         const active =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+          pathname === item.href ||
+          (item.href !== "/results" &&
+            pathname.startsWith(`${item.href}/`));
         const Icon = item.icon;
         return (
           <Link
@@ -66,10 +74,10 @@ export function SidebarNav({ role }: { role: UserRole }) {
               if (!allowed) e.preventDefault();
             }}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors border-l-2 border-transparent",
               active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70",
+                ? "bg-sidebar-accent/90 text-sidebar-accent-foreground border-l-sidebar-primary shadow-sm font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
               !allowed && "pointer-events-none opacity-40",
             )}
           >

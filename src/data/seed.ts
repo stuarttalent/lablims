@@ -444,6 +444,8 @@ const DEFAULT_SETTINGS = (): DemoStore["settings"] => ({
     "Serology/Immunology",
     "Molecular",
   ],
+  fhirBaseUrl: "https://demo.lablims.local/fhir/R4",
+  fhirOrganizationId: "lab-main",
 });
 
 export function createInitialStore(): DemoStore {

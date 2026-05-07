@@ -44,8 +44,8 @@ export default function LoginPage() {
   }, [hydrated, user, router]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-cyan-100/55 via-background to-sky-100/45 dark:from-cyan-950/35 dark:via-background dark:to-slate-950/60">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_400px_at_20%_-10%,theme(colors.cyan.300/25),transparent),radial-gradient(700px_420px_at_100%_0%,theme(colors.sky.300/22),transparent)] dark:bg-[radial-gradient(700px_400px_at_15%_-10%,theme(colors.cyan.500/14),transparent)]" />
+    <div className="relative min-h-screen bg-muted/40">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,oklch(0.97_0.015_250)_0%,transparent_45%)]" />
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6">
         <div className="mb-8 flex flex-col gap-4">
           <div className="flex items-center gap-3">
@@ -65,15 +65,14 @@ export default function LoginPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-start">
-          <Card className="border-border/70 shadow-lg shadow-cyan-900/5 bg-card/85 backdrop-blur-md">
+          <Card className="border-border shadow-md bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <FlaskConical className="size-5 text-primary" />
-                Choose a demo role
+                Session selection
               </CardTitle>
               <CardDescription>
-                No passwords — pick a persona to explore role-based
-                permissions. Data persists locally in your browser.
+                No authentication server — choose a role to enforce demo permissions. Data stays in this browser.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -104,9 +103,9 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-dashed border-amber-400/50 bg-amber-50/50 dark:bg-amber-950/20">
+          <Card className="border-dashed border-amber-400/40 bg-amber-50/40 dark:bg-amber-950/15">
             <CardHeader>
-              <CardTitle>What each role can do</CardTitle>
+              <CardTitle>Role capabilities</CardTitle>
               <CardDescription>
                 Permissions are enforced in navigation, tables, and action
                 buttons.

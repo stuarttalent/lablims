@@ -19,19 +19,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50/35 via-background to-slate-100/50 dark:from-cyan-950/15 dark:via-background dark:to-slate-950/35">
+    <div className="min-h-screen bg-muted/30">
       <div className="flex min-h-screen w-full">
-        <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border/80 bg-sidebar/80 backdrop-blur-md supports-backdrop-filter:bg-sidebar/70">
+        <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
           <SidebarNav role={user.role} />
-          <div className="mt-auto p-3 text-[11px] text-muted-foreground border-t border-sidebar-border/60">
-            Permissions for your role are enforced in navigation, forms, and
-            actions.
+          <div className="mt-auto p-3 text-[10px] leading-relaxed text-sidebar-foreground/60 border-t border-sidebar-border">
+            Role-based access. HL7 FHIR R4 JSON exports available under
+            Interoperability.
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border/60 bg-background/75 backdrop-blur-xl supports-backdrop-filter:bg-background/65">
-            <div className="flex h-14 items-center gap-3 px-3 sm:px-5">
+          <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md shadow-sm">
+            <div className="flex h-14 items-center gap-3 px-3 sm:px-5 lg:px-6">
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger
                   render={
@@ -62,8 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       );
                     }
                   }}
-                  placeholder="Search patients (press Enter)…"
-                  className="pl-9 h-9 bg-background/80"
+                  placeholder="Search patient records (Enter)…"
+                  className="pl-9 h-9 bg-background border-input"
                 />
               </div>
 
@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-3 py-4 sm:px-5 sm:py-6 max-w-[1600px] w-full mx-auto">
+          <main className="flex-1 px-3 py-5 sm:px-6 sm:py-7 max-w-[1680px] w-full mx-auto">
             {children}
           </main>
         </div>

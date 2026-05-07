@@ -39,7 +39,9 @@ npm start
 1. **Login** — Choose any of the five personas (Admin, Lab Scientist, Lab Tech, Biller, Doctor). No password.
 2. **Roles** — Navigation and actions change by role (e.g. billing and settings for Admin/Biller; verification for Scientist; entry for Tech).
 3. **Data** — Seeded patients, doctors, orders, invoices, and catalogue tests load on first visit; changes persist in the browser until you **Reset demo data** under **Settings** (Admin).
-4. **PDF / print** — Open a **Result slip**, then **Export PDF** or **Print**. Footer text states the document is for demonstration only.
+4. **FHIR / HL7** — Under **FHIR / Interop**, preview **HL7 FHIR R4** JSON (Bundle with Organization, Patient, ServiceRequest, Observation, DiagnosticReport). Tests in the catalogue include representative **LOINC** codes for `Observation.code`. This app does **not** host a live FHIR REST API; exports are for demonstration only. Legacy **HL7 v2.x** messaging (e.g. ORU^R01) is referenced but not generated.
+
+5. **PDF / print** — Open a **Result slip**, then **Export PDF** or **Print**. Footer text states the document is for demonstration only.
 
 ## Project layout (high level)
 
@@ -47,7 +49,7 @@ npm start
 - `src/components/` — UI, layout shell, result slip, providers
 - `src/contexts/` — Mock auth + demo data store
 - `src/data/` — Seed data and static catalogue
-- `src/lib/` — Permissions, pricing, local storage helpers
+- `src/lib/` — Permissions, pricing, local storage, **FHIR R4 JSON builders** (`lib/fhir/`)
 - `src/types/` — Shared TypeScript types
 
 ## Licence / compliance

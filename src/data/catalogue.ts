@@ -4,16 +4,19 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-fbc",
     name: "Full Blood Count",
+    loincCode: "58410-2",
     department: "Haematology",
     sampleType: "EDTA whole blood",
     turnaroundTime: "4 hours",
     price: 18,
-    referenceRange: "WBC 4.0–11.0 ×10⁹/L; Hb 12–16 g/dL (F), 13–17 g/dL (M); PLT 150–450 ×10⁹/L",
+    referenceRange:
+      "WBC 4.0–11.0 ×10⁹/L; Hb 12–16 g/dL (F), 13–17 g/dL (M); PLT 150–450 ×10⁹/L",
     units: "various",
   },
   {
     id: "t-esr",
     name: "ESR",
+    loincCode: "4537-7",
     department: "Haematology",
     sampleType: "EDTA whole blood",
     turnaroundTime: "4 hours",
@@ -24,6 +27,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-blood-group",
     name: "Blood Grouping",
+    loincCode: "34533-6",
     department: "Haematology",
     sampleType: "EDTA whole blood",
     turnaroundTime: "2 hours",
@@ -34,6 +38,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-malaria",
     name: "Malaria Parasite Test",
+    loincCode: "11277-1",
     department: "Haematology",
     sampleType: "EDTA whole blood / capillary",
     turnaroundTime: "2 hours",
@@ -44,26 +49,31 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-ue",
     name: "Urea and Electrolytes",
+    loincCode: "24321-2",
     department: "Chemistry",
     sampleType: "Serum",
     turnaroundTime: "4 hours",
     price: 22,
-    referenceRange: "Na 135–145; K 3.5–5.1; Urea 2.5–7.8; Creat 62–106 (M) µmol/L",
+    referenceRange:
+      "Na 135–145; K 3.5–5.1; Urea 2.5–7.8; Creat 62–106 (M) µmol/L",
     units: "mmol/L / µmol/L",
   },
   {
     id: "t-lft",
     name: "Liver Function Tests",
+    loincCode: "24325-3",
     department: "Chemistry",
     sampleType: "Serum",
     turnaroundTime: "6 hours",
     price: 28,
-    referenceRange: "ALT < 40 U/L; AST < 40 U/L; ALP 40–129 U/L; Bilirubin < 21 µmol/L",
+    referenceRange:
+      "ALT < 40 U/L; AST < 40 U/L; ALP 40–129 U/L; Bilirubin < 21 µmol/L",
     units: "U/L / µmol/L",
   },
   {
     id: "t-lipid",
     name: "Lipid Profile",
+    loincCode: "57698-3",
     department: "Chemistry",
     sampleType: "Serum (fasting preferred)",
     turnaroundTime: "6 hours",
@@ -74,6 +84,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-glucose",
     name: "Blood Glucose",
+    loincCode: "2345-7",
     department: "Chemistry",
     sampleType: "Fluoride plasma / serum",
     turnaroundTime: "2 hours",
@@ -84,6 +95,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hba1c",
     name: "HbA1c",
+    loincCode: "4548-4",
     department: "Chemistry",
     sampleType: "EDTA whole blood",
     turnaroundTime: "24 hours",
@@ -94,6 +106,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-creat",
     name: "Creatinine",
+    loincCode: "2160-0",
     department: "Chemistry",
     sampleType: "Serum",
     turnaroundTime: "3 hours",
@@ -104,6 +117,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-uric",
     name: "Uric Acid",
+    loincCode: "3084-1",
     department: "Chemistry",
     sampleType: "Serum",
     turnaroundTime: "3 hours",
@@ -114,6 +128,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-urine-mcs",
     name: "Urine MCS",
+    loincCode: "630-4",
     department: "Microbiology",
     sampleType: "Mid-stream urine",
     turnaroundTime: "48–72 hours",
@@ -124,6 +139,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-stool-mcs",
     name: "Stool MCS",
+    loincCode: "870-2",
     department: "Microbiology",
     sampleType: "Stool",
     turnaroundTime: "48–72 hours",
@@ -134,6 +150,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-blood-culture",
     name: "Blood Culture",
+    loincCode: "600-7",
     department: "Microbiology",
     sampleType: "Blood (aerobic bottles)",
     turnaroundTime: "5–7 days",
@@ -144,6 +161,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hvs",
     name: "HVS MCS",
+    loincCode: "64698-6",
     department: "Microbiology",
     sampleType: "High vaginal swab",
     turnaroundTime: "48–72 hours",
@@ -154,6 +172,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-wound",
     name: "Wound Swab MCS",
+    loincCode: "64698-6",
     department: "Microbiology",
     sampleType: "Wound swab",
     turnaroundTime: "48–72 hours",
@@ -164,6 +183,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hiv",
     name: "HIV Test",
+    loincCode: "75622-1",
     department: "Serology/Immunology",
     sampleType: "Serum / whole blood (rapid)",
     turnaroundTime: "24 hours",
@@ -174,6 +194,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hbsag",
     name: "Hepatitis B Surface Antigen",
+    loincCode: "5195-3",
     department: "Serology/Immunology",
     sampleType: "Serum",
     turnaroundTime: "24 hours",
@@ -184,6 +205,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hcv",
     name: "Hepatitis C Antibody",
+    loincCode: "16128-1",
     department: "Serology/Immunology",
     sampleType: "Serum",
     turnaroundTime: "24 hours",
@@ -194,6 +216,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-hcg",
     name: "Pregnancy Test",
+    loincCode: "2106-3",
     department: "Serology/Immunology",
     sampleType: "Urine / serum",
     turnaroundTime: "1 hour",
@@ -204,6 +227,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-crp",
     name: "CRP",
+    loincCode: "1988-5",
     department: "Serology/Immunology",
     sampleType: "Serum",
     turnaroundTime: "4 hours",
@@ -214,6 +238,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-rf",
     name: "Rheumatoid Factor",
+    loincCode: "11572-5",
     department: "Serology/Immunology",
     sampleType: "Serum",
     turnaroundTime: "24 hours",
@@ -224,6 +249,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-pcr",
     name: "PCR Test",
+    loincCode: "94500-6",
     department: "Molecular",
     sampleType: "Nasopharyngeal swab / plasma",
     turnaroundTime: "24 hours",
@@ -234,6 +260,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   {
     id: "t-viral-load",
     name: "Viral Load Demo Test",
+    loincCode: "10351-5",
     department: "Molecular",
     sampleType: "Plasma",
     turnaroundTime: "48 hours",

@@ -84,7 +84,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = loadStoredStore();
     startTransition(() => {
-      if (saved) setStore(saved);
+      if (saved) {
+        const defaults = createInitialStore();
+        setStore({
+          ...saved,
+          settings: { ...defaults.settings, ...saved.settings },
+        });
+      }
       setHydrated(true);
     });
   }, []);

@@ -32,6 +32,11 @@ export default function SettingsPage() {
   const [footer, setFooter] = useState(s.reportFooter);
   const [deptText, setDeptText] = useState(s.departments.join(", "));
 
+  const [fhirBaseUrl, setFhirBaseUrl] = useState(s.fhirBaseUrl ?? "");
+  const [fhirOrganizationId, setFhirOrganizationId] = useState(
+    s.fhirOrganizationId ?? "",
+  );
+
   function saveProfile() {
     const departments = deptText
       .split(",")
@@ -46,6 +51,8 @@ export default function SettingsPage() {
       registrationNumber: reg,
       reportFooter: footer,
       departments: departments.length ? departments : s.departments,
+      fhirBaseUrl: fhirBaseUrl.trim() || undefined,
+      fhirOrganizationId: fhirOrganizationId.trim() || undefined,
     });
     toast.success("Lab profile saved locally.");
   }
@@ -92,6 +99,25 @@ export default function SettingsPage() {
           <div className="space-y-2 sm:col-span-2">
             <Label>Departments (comma separated)</Label>
             <Input value={deptText} onChange={(e) => setDeptText(e.target.value)} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>FHIR base URL (demo metadata)</Label>
+            <Input
+              placeholder="https://your-fhir-server/fhir/R4"
+              value={fhirBaseUrl}
+              onChange={(e) => setFhirBaseUrl(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Used in exported JSON <code className="font-mono">NamingSystem</code> URIs only; no live API is called.
+            </p>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Organization logical id (FHIR id)</Label>
+            <Input
+              placeholder="lab-main"
+              value={fhirOrganizationId}
+              onChange={(e) => setFhirOrganizationId(e.target.value)}
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Report template footer</Label>

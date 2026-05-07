@@ -29,7 +29,8 @@ export default function CataloguePage() {
       (t) =>
         t.name.toLowerCase().includes(needle) ||
         t.department.toLowerCase().includes(needle) ||
-        t.sampleType.toLowerCase().includes(needle),
+        t.sampleType.toLowerCase().includes(needle) ||
+        (t.loincCode?.toLowerCase().includes(needle) ?? false),
     );
   }, [store.settings, q]);
 
@@ -49,7 +50,8 @@ export default function CataloguePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Test catalogue</h1>
         <p className="text-sm text-muted-foreground">
-          Reference intervals are illustrative for the demo only.
+          Orderable tests with LOINC codes for FHIR <code className="text-xs font-mono bg-muted px-1 rounded">Observation.code</code>.
+          Reference ranges are illustrative for this demo.
         </p>
       </div>
       <DemoDisclaimer variant="compact" />
@@ -69,7 +71,7 @@ export default function CataloguePage() {
           const items = grouped.get(dep) ?? [];
           if (items.length === 0) return null;
           return (
-            <Card key={dep} className="border-border/70 shadow-sm bg-card/85 backdrop-blur-sm">
+            <Card key={dep} className="border-border shadow-sm">
               <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <FlaskConical className="size-4 text-primary" />
@@ -81,18 +83,25 @@ export default function CataloguePage() {
                 {items.map((t) => (
                   <div
                     key={t.id}
-                    className="rounded-xl border border-border/60 bg-gradient-to-br from-background/80 to-cyan-50/25 dark:to-cyan-950/20 p-4"
+                    className="rounded-lg border border-border bg-card p-4 shadow-sm"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{t.name}</p>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-foreground">{t.name}</p>
+                          {t.loincCode ? (
+                            <Badge variant="secondary" className="font-mono text-[10px]">
+                              LOINC {t.loincCode}
+                            </Badge>
+                          ) : null}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           Sample: {t.sampleType} · TAT: {t.turnaroundTime}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold">${t.effectivePrice.toFixed(0)}</p>
-                        <p className="text-[11px] text-muted-foreground">demo pricing</p>
+                        <p className="text-[11px] text-muted-foreground">list price</p>
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">

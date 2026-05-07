@@ -17,6 +17,8 @@ export type TestDepartment =
 export interface CatalogueTest {
   id: string;
   name: string;
+  /** LOINC code when applicable (laboratory orders/results coding). */
+  loincCode?: string;
   department: TestDepartment;
   sampleType: string;
   turnaroundTime: string;
@@ -125,6 +127,10 @@ export interface LabSettings {
   /** testId -> price override */
   priceOverrides: Record<string, number>;
   departments: string[];
+  /** FHIR base URL advertised for this demo tenant (no live endpoint). */
+  fhirBaseUrl?: string;
+  /** Logical id for Organization resource in FHIR exports. */
+  fhirOrganizationId?: string;
 }
 
 export interface DemoStore {

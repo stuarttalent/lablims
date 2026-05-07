@@ -10,7 +10,7 @@ import {
 } from "@/lib/permissions";
 import type { OrderStatus } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -73,7 +73,24 @@ export default function OrderDetailPage() {
 
       <DemoDisclaimer variant="compact" />
 
-      <Card className="border-border/70 shadow-sm">
+      <Card className="border-dashed border-primary/25 bg-muted/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">HL7 FHIR (R4)</CardTitle>
+          <CardDescription className="text-xs">
+            Generate a synthetic <strong>Bundle</strong> with Organization, Patient,
+            ServiceRequest, Observations, and DiagnosticReport for this accession.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/interoperability?order=${order.id}`}>
+              Open interoperability workspace
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Workflow</CardTitle>
         </CardHeader>
