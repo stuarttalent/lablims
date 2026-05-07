@@ -280,51 +280,7 @@ export function ResultSlipDocument({
               Result entry &amp; authorization
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-[11px]">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-                  <th className="px-3 py-2 font-semibold">Analyte</th>
-                  <th className="px-3 py-2 font-semibold">Entered by</th>
-                  <th className="px-3 py-2 font-semibold">Credentials</th>
-                  <th className="px-3 py-2 font-semibold">Authorized by</th>
-                  <th className="px-3 py-2 font-semibold">Auth. credentials</th>
-                  <th className="px-3 py-2 font-semibold">Auth. date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.tests.map((line) => {
-                  const meta = getTestById(line.testId);
-                  return (
-                    <tr
-                      key={line.testId}
-                      className="border-b border-slate-100 last:border-0"
-                    >
-                      <td className="px-3 py-2 font-medium text-slate-900">
-                        {meta?.name ?? line.testId}
-                      </td>
-                      <td className="px-3 py-2 text-slate-800">
-                        {line.enteredBy ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {line.enteredByCredential ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 font-medium text-teal-900">
-                        {line.verifiedBy ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {line.verifiedByCredential ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {line.verificationDate ?? "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-teal-100 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${released ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"}`}
