@@ -1,7 +1,6 @@
 "use client";
 
 import { useData } from "@/contexts/data-context";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import {
   buildDemoTransactionBundle,
   buildOrganization,
@@ -99,7 +98,8 @@ function InteroperabilityInner() {
             Organization, ServiceRequest, Observation, DiagnosticReport). LOINC
             codes from the catalogue are emitted in{" "}
             <code className="text-xs font-mono bg-muted px-1 rounded">code.coding</code>{" "}
-            where available. This tenant does not expose a live FHIR REST API.
+            where available. Pair this export with your organisation&apos;s FHIR
+            gateway or integration engine as required.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -125,13 +125,11 @@ function InteroperabilityInner() {
         </div>
       </div>
 
-      <DemoDisclaimer variant="inline" />
-
       <Card className="border-border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Export context</CardTitle>
           <CardDescription>
-            Advertised capability statement base (demo):{" "}
+            Capability / naming base configured as{" "}
             <span className="font-mono text-xs">{base}</span> · FHIR{" "}
             <span className="font-mono">{FHIR_VERSION}</span>
           </CardDescription>
@@ -202,7 +200,7 @@ function InteroperabilityInner() {
           <CardTitle className="text-base">HL7 v2.x (reference)</CardTitle>
           <CardDescription>
             ORU^R01 observation result and OML^O21 laboratory order messages
-            are common in legacy lab–EHR integration. This demo focuses on
+            are common in legacy lab–EHR integration. This module provides
             FHIR R4 JSON exports; HL7 v2 wire formats are not generated here.
           </CardDescription>
         </CardHeader>

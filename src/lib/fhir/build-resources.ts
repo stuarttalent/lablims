@@ -12,7 +12,6 @@ import {
   FHIR_STRUCTURE_DEFINITION_ORGANIZATION,
   FHIR_STRUCTURE_DEFINITION_PATIENT,
   FHIR_STRUCTURE_DEFINITION_SERVICE_REQUEST,
-  FHIR_VERSION,
   LOINC_SYSTEM,
 } from "./constants";
 
@@ -43,7 +42,7 @@ function isoInstantFromLocalDateTime(local: string): string {
 export function resolveFhirBase(settings: LabSettings): string {
   return (
     settings.fhirBaseUrl?.replace(/\/$/, "") ??
-    "https://demo.lablims.local/fhir/R4"
+    "https://fhir.metropolitanclinlab.org/R4"
   );
 }
 
@@ -56,7 +55,7 @@ export function buildOrganization(
     id: oid,
     meta: {
       profile: [FHIR_STRUCTURE_DEFINITION_ORGANIZATION],
-      versionId: "demo-1",
+      versionId: "1",
     },
     identifier: [
       {
@@ -90,13 +89,6 @@ export function buildPatient(
     id: pid,
     meta: {
       profile: [FHIR_STRUCTURE_DEFINITION_PATIENT],
-      tag: [
-        {
-          system: `${resolveFhirBase(settings)}/CodeSystem/demo-tags`,
-          code: "demo-synthetic",
-          display: "Synthetic demo patient — not real PHI",
-        },
-      ],
     },
     identifier: [
       {
@@ -430,13 +422,6 @@ export function buildDemoTransactionBundle(store: DemoStore, orderId: string) {
     timestamp: new Date().toISOString(),
     meta: {
       lastUpdated: new Date().toISOString(),
-      tag: [
-        {
-          system: "http://hl7.org/fhir/v3/ObservationValue",
-          code: "UNAS",
-          display: "Unassessed — demo bundle",
-        },
-      ],
     },
     entry: [
       {
@@ -452,12 +437,6 @@ export function buildDemoTransactionBundle(store: DemoStore, orderId: string) {
       {
         fullUrl: `urn:uuid:dr-${toFhirId(order.id)}`,
         resource: dr,
-      },
-    ],
-    extension: [
-      {
-        url: "http://lablims.demo/fhir/StructureDefinition/demo-disclaimer",
-        valueString: `HL7 FHIR ${FHIR_VERSION} shaped JSON for demonstration only. Not for clinical or production interoperability.`,
       },
     ],
   };

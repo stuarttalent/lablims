@@ -3,31 +3,31 @@ import type { MockUser } from "@/types";
 export const MOCK_USERS: MockUser[] = [
   {
     id: "u-admin",
-    email: "admin@lablims.demo",
+    email: "t.moyo@metropolitanclinlab.org",
     name: "Tariro Moyo",
     role: "admin",
   },
   {
     id: "u-scientist",
-    email: "scientist@lablims.demo",
+    email: "c.ndlovu@metropolitanclinlab.org",
     name: "Dr. Chipo Ndlovu",
     role: "scientist",
   },
   {
     id: "u-tech",
-    email: "tech@lablims.demo",
+    email: "k.makoni@metropolitanclinlab.org",
     name: "Kudzai Makoni",
     role: "tech",
   },
   {
     id: "u-biller",
-    email: "biller@lablims.demo",
+    email: "n.gondo@metropolitanclinlab.org",
     name: "Nyasha Gondo",
     role: "biller",
   },
   {
     id: "u-doctor",
-    email: "doctor@lablims.demo",
+    email: "b.mutasa@rehabmed.co.zw",
     name: "Dr. Brian Mutasa",
     role: "doctor",
   },

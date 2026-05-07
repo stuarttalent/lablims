@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -79,7 +78,7 @@ export default function NewInvoicePage() {
       tax: parseFloat(tax || "0") || 0,
       paymentMethod: paymentMethod || undefined,
     });
-    toast.success("Invoice generated (demo).");
+    toast.success("Invoice generated.");
     router.push(`/billing/${inv.id}`);
   }
 
@@ -91,8 +90,6 @@ export default function NewInvoicePage() {
           Price list honours optional overrides from Settings.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Header</CardTitle>

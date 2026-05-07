@@ -127,10 +127,12 @@ export interface LabSettings {
   /** testId -> price override */
   priceOverrides: Record<string, number>;
   departments: string[];
-  /** FHIR base URL advertised for this demo tenant (no live endpoint). */
+  /** Base URL for FHIR NamingSystem and idempotency in exports. */
   fhirBaseUrl?: string;
   /** Logical id for Organization resource in FHIR exports. */
   fhirOrganizationId?: string;
+  /** Unique per browser / deployment; used for report QR verification. */
+  limsInstanceId?: string;
 }
 
 export interface DemoStore {

@@ -259,7 +259,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
   {
     id: "t-viral-load",
-    name: "Viral Load Demo Test",
+    name: "HIV-1 RNA quantitative (viral load)",
     loincCode: "10351-5",
     department: "Molecular",
     sampleType: "Plasma",

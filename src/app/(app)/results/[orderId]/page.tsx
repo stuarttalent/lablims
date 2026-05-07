@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -63,8 +62,6 @@ export default function ResultsWorkspacePage() {
           </Button>
         </div>
       </div>
-
-      <DemoDisclaimer variant="compact" />
 
       {readOnly && (
         <p className="text-sm text-muted-foreground">
@@ -217,7 +214,7 @@ export default function ResultsWorkspacePage() {
                             updateOrder(order.id, {
                               status: "Pending Verification",
                             });
-                            toast.success("Submitted for verification (demo).");
+                            toast.success("Submitted for verification.");
                           }}
                         >
                           Submit for verification

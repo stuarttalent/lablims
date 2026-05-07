@@ -1,4 +1,4 @@
-/** HL7 FHIR R4 — demo constants only. Not a certified FHIR server. */
+/** HL7 FHIR R4 constants for resource metadata and terminology URIs. */
 export const FHIR_VERSION = "4.0.1";
 
 export const LOINC_SYSTEM = "http://loinc.org";

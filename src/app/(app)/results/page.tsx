@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
@@ -47,8 +46,6 @@ export default function ResultsIndexPage() {
           <span className="font-medium text-foreground/90">More tools</span>.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-border/70 shadow-sm">
         <CardContent className="p-4 space-y-3">
           <Input

@@ -1,6 +1,5 @@
 "use client";
 
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
 import { getTestById } from "@/data/catalogue";
@@ -142,8 +141,6 @@ export default function DashboardPage() {
           {format(new Date(), "PPP")}
         </Badge>
       </div>
-
-      <DemoDisclaimer variant="inline" />
 
       {user ? <QuickActions role={user.role} /> : null}
 
@@ -341,7 +338,7 @@ export default function DashboardPage() {
 
           <Card className="border-border/70 shadow-sm mt-4">
             <CardHeader>
-              <CardTitle className="text-base">Department volume (demo)</CardTitle>
+              <CardTitle className="text-base">Department volume</CardTitle>
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">

@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
           <SidebarNav role={user.role} />
           <div className="mt-auto p-3 text-[10px] leading-relaxed text-sidebar-foreground/60 border-t border-sidebar-border">
-            Demo only — your view matches your role. Advanced options live under
+            Your view matches your role. Advanced modules appear under
             More tools.
           </div>
         </aside>

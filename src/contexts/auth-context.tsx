@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 
-const AUTH_KEY = "lablims-demo-session";
+const AUTH_KEY = "lablims-session-v1";
 
 type AuthContextValue = {
   user: MockUser | null;

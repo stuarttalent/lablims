@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +62,7 @@ export default function PatientProfilePage() {
       return;
     }
     updatePatient(patient.id, { ...draft, age });
-    toast.success("Patient updated (demo, local only).");
+    toast.success("Patient updated.");
     setEditing(false);
     setDraft(null);
   }
@@ -120,8 +119,6 @@ export default function PatientProfilePage() {
           )}
         </div>
       </div>
-
-      <DemoDisclaimer variant="compact" />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/70 shadow-sm">
@@ -204,7 +201,7 @@ export default function PatientProfilePage() {
               <Link href={`/orders/new?patient=${patient.id}`}>Create lab order</Link>
             </Button>
             <p className="text-xs text-muted-foreground pt-2">
-              Demo shortcuts — no external systems are contacted.
+              Quick actions for this patient chart.
             </p>
           </CardContent>
         </Card>

@@ -15,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -68,8 +67,6 @@ export default function PatientsPage() {
           <Badge variant="secondary">View-only for your role</Badge>
         )}
       </div>
-
-      <DemoDisclaimer variant="compact" />
 
       <Card className="border-border/70 shadow-sm">
         <CardContent className="p-4 space-y-3">

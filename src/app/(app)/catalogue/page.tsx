@@ -5,7 +5,6 @@ import { useData } from "@/contexts/data-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import { useMemo, useState } from "react";
 import type { TestDepartment } from "@/types";
 import { FlaskConical, Search } from "lucide-react";
@@ -50,12 +49,10 @@ export default function CataloguePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Available tests</h1>
         <p className="text-sm text-muted-foreground max-w-2xl">
-          What your lab offers, sample types, and price hints for this demo.
+          What your lab offers, sample types, and current price list.
           LOINC codes appear for technical use; ranges are illustrative only.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <div className="relative max-w-md">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input

@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -59,7 +58,7 @@ export default function NewOrderPage() {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-muted-foreground">
-          Your demo role cannot create lab orders.
+          Your role cannot create laboratory orders.
           <div className="mt-4">
             <Button asChild variant="outline">
               <Link href="/orders">Back</Link>
@@ -93,7 +92,7 @@ export default function NewOrderPage() {
       notes: notes.trim() || undefined,
       testIds: selectedIds,
     });
-    toast.success("Lab order created (local demo).");
+    toast.success("Laboratory order created.");
     router.push(`/orders/${order.id}`);
   }
 
@@ -105,8 +104,6 @@ export default function NewOrderPage() {
           Combine multiple analytes in a single collection event.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Order details</CardTitle>

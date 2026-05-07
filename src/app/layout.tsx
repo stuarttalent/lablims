@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "LabLIMS — Laboratory Information System",
   description:
-    "Hospital-grade laboratory workflow demo with HL7 FHIR–oriented exports.",
+    "Laboratory information system with HL7 FHIR–oriented interoperability exports.",
 };
 
 export default function RootLayout({

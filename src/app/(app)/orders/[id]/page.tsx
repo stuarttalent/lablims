@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
@@ -71,8 +70,6 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-dashed border-primary/25 bg-muted/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">HL7 FHIR (R4)</CardTitle>
@@ -119,7 +116,7 @@ export default function OrderDetailPage() {
             </Select>
             {user && !canChangeOrderStatus(user.role) && (
               <p className="text-[11px] text-muted-foreground">
-                Status changes are limited to lab operations roles in this demo.
+                Status changes require laboratory operations roles.
               </p>
             )}
           </div>

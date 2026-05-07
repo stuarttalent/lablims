@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { Plus, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +30,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
           <p className="text-sm text-muted-foreground">
-            Invoices, tenders, and payment tracking (demo currencies in USD).
+            Invoices, tenders, and payment tracking (USD).
           </p>
         </div>
         <Button asChild className="gap-2">
@@ -41,8 +40,6 @@ export default function BillingPage() {
           </Link>
         </Button>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Tabs defaultValue="all">
         <TabsList>
           <TabsTrigger value="all">All invoices</TabsTrigger>

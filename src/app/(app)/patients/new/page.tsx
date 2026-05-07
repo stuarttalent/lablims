@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 
 export default function NewPatientPage() {
@@ -39,7 +38,7 @@ export default function NewPatientPage() {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-muted-foreground">
-          Your role cannot register patients in this demo.
+          Your role cannot register patients.
           <div className="mt-4">
             <Button asChild variant="outline">
               <Link href="/patients">Back</Link>
@@ -73,7 +72,7 @@ export default function NewPatientPage() {
       referringDoctor: referringDoctor.trim(),
       medicalAid: medicalAid.trim(),
     });
-    toast.success("Patient saved locally (demo).");
+    toast.success("Patient saved.");
     router.push(`/patients/${p.id}`);
   }
 
@@ -82,11 +81,9 @@ export default function NewPatientPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Register patient</h1>
         <p className="text-sm text-muted-foreground">
-          Information is stored only in this browser for the demo.
+          Information is stored in this browser for this workstation session.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Demographics</CardTitle>

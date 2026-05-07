@@ -65,14 +65,14 @@ export default function Home() {
         <main className="flex flex-1 flex-col justify-center px-5 pb-16 pt-4 sm:px-8 sm:pb-20">
           <div className="mx-auto w-full max-w-2xl text-center sm:text-left lg:mx-0">
             <p className="mb-4 inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white/80 backdrop-blur-md">
-              Demo laboratory information system
+              Laboratory information system
             </p>
             <h1 className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-5xl sm:leading-[1.1] lg:text-6xl">
               Clear tools for every shift.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-white/75 sm:mx-0">
               Orders, results, and billing in one calm layout. Sign in to open
-              the session picker and choose a demo role.
+              the session picker to continue with your assigned profile.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:items-stretch sm:justify-start">
@@ -92,25 +92,25 @@ export default function Home() {
                 variant="outline"
                 className="h-12 min-w-[200px] rounded-full border-white/35 bg-white/10 text-white backdrop-blur-md hover:bg-white/15 hover:text-white"
               >
-                <Link href="/login">Choose demo role</Link>
+                <Link href="/login">Staff access</Link>
               </Button>
             </div>
 
             <p className="mt-10 text-xs leading-relaxed text-white/45">
-              Hero photograph is shipped in{" "}
+              Background image in{" "}
               <code className="rounded bg-white/10 px-1 py-0.5 text-[10px]">
                 /public/hero-lab.jpg
-              </code>{" "}
-              so it always loads. Source:{" "}
+              </code>
+              .{" "}
               <a
                 href="https://unsplash.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline decoration-white/30 underline-offset-2 hover:text-white/70"
               >
-                Unsplash
+                Stock photography (Unsplash)
               </a>
-              . Demonstration only — not for real patient care.
+              .
             </p>
           </div>
         </main>

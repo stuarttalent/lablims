@@ -1,6 +1,5 @@
 "use client";
 
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import { LabMarketingShell } from "@/components/layout/lab-marketing-shell";
 import { MOCK_USERS } from "@/data/mock-users";
 import { ROLE_LABELS } from "@/lib/permissions";
@@ -76,13 +75,10 @@ export default function LoginPage() {
                   LabLIMS
                 </h1>
                 <p className="text-sm text-white/65">
-                  Sign in — demonstration workspace
+                  Secure sign in — select your account profile
                 </p>
               </div>
             </div>
-          </div>
-          <div className="overflow-hidden rounded-2xl shadow-lg">
-            <DemoDisclaimer variant="banner" />
           </div>
         </header>
 
@@ -98,8 +94,8 @@ export default function LoginPage() {
                 </CardTitle>
               </div>
               <CardDescription className="text-base text-white/65">
-                Pick a demo persona — no password. Permissions match the role;
-                data stays in this browser only.
+                Choose your profile to continue. Session and permissions are
+                applied automatically for this workstation.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -171,8 +167,8 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-10 text-center text-xs text-white/50">
-          LabLIMS demo — not a regulated medical device. Do not use for real
-          diagnostic decisions.
+          For authorized laboratory staff only. Activity may be logged according
+          to your organisation&apos;s policy.
         </p>
       </div>
     </LabMarketingShell>

@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 
 export default function ResultsVerifyPage() {
   const { store } = useData();
@@ -24,11 +23,9 @@ export default function ResultsVerifyPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Result verification queue</h1>
         <p className="text-sm text-muted-foreground">
-          Orders waiting for laboratory scientist sign-off (demo workflow).
+          Orders awaiting laboratory scientist sign-off.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       {user && !canVerifyResults(user.role) && (
         <p className="text-sm text-muted-foreground">
           Your role can view this list but cannot verify in the workspace.

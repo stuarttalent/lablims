@@ -3,7 +3,6 @@
 import { useData } from "@/contexts/data-context";
 import { ResultSlipDocument } from "@/components/results/result-slip-document";
 import { SlipExportActions } from "@/components/results/slip-export-actions";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
@@ -28,10 +27,6 @@ export default function ResultSlipPage() {
             <Link href={`/results/${order.id}`}>Workspace</Link>
           </Button>
         </div>
-      </div>
-
-      <div className="no-print">
-        <DemoDisclaimer variant="inline" />
       </div>
 
       <ResultSlipDocument order={order} patient={patient} store={store} />

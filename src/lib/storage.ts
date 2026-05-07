@@ -1,7 +1,7 @@
 import { createInitialStore } from "@/data/seed";
 import type { DemoStore } from "@/types";
 
-export const STORAGE_KEY = "lablims-demo-store-v1";
+export const STORAGE_KEY = "lablims-store-v2";
 
 export function loadStoredStore(): DemoStore | null {
   if (typeof window === "undefined") return null;

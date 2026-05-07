@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import {
   Table,
   TableBody,
@@ -65,8 +64,6 @@ export default function SettingsPage() {
           Branding, catalogue pricing overrides, and template footers.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Lab profile</CardTitle>
@@ -101,7 +98,7 @@ export default function SettingsPage() {
             <Input value={deptText} onChange={(e) => setDeptText(e.target.value)} />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>FHIR base URL (demo metadata)</Label>
+            <Label>FHIR base URL</Label>
             <Input
               placeholder="https://your-fhir-server/fhir/R4"
               value={fhirBaseUrl}
@@ -158,16 +155,16 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Reset local demo storage to the original seeded JSON (clears browser changes).
+            Reset local data to the factory default dataset (clears unsaved changes on this workstation).
           </p>
           <Button
             variant="destructive"
             onClick={() => {
               resetDemoData();
-              toast.success("Demo data restored from seed.");
+              toast.success("Data reset to factory defaults.");
             }}
           >
-            Reset demo data
+            Reset to factory defaults
           </Button>
         </CardContent>
       </Card>
@@ -210,7 +207,7 @@ function PriceRow({
               next[testId] = n;
             }
             updateSettings({ priceOverrides: next });
-            toast.message("Pricing updated (demo)", { description: name });
+            toast.message("Pricing updated", { description: name });
           }}
         />
       </TableCell>

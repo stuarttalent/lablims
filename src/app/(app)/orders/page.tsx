@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -61,11 +60,9 @@ export default function OrdersPage() {
             </Link>
           </Button>
         ) : (
-          <Badge variant="secondary">Assigned work only (demo)</Badge>
+          <Badge variant="secondary">Assigned work only</Badge>
         )}
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Card className="border-border/70 shadow-sm">
         <CardContent className="p-4 space-y-3">
           <Input

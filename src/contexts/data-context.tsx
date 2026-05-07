@@ -84,12 +84,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = loadStoredStore();
     startTransition(() => {
+      const defaults = createInitialStore();
       if (saved) {
-        const defaults = createInitialStore();
-        setStore({
-          ...saved,
-          settings: { ...defaults.settings, ...saved.settings },
-        });
+        const settings = { ...defaults.settings, ...saved.settings };
+        let next: DemoStore = { ...saved, settings };
+        if (!settings.limsInstanceId) {
+          const limsInstanceId = crypto.randomUUID();
+          next = {
+            ...saved,
+            settings: { ...settings, limsInstanceId },
+          };
+          persistStore(next);
+        }
+        setStore(next);
+      } else {
+        const limsInstanceId = crypto.randomUUID();
+        const fresh = createInitialStore();
+        const next: DemoStore = {
+          ...fresh,
+          settings: { ...fresh.settings, limsInstanceId },
+        };
+        persistStore(next);
+        setStore(next);
       }
       setHydrated(true);
     });
@@ -105,8 +121,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const resetDemoData = useCallback(() => {
     const fresh = createInitialStore();
-    setStore(fresh);
-    persistStore(fresh);
+    const next: DemoStore = {
+      ...fresh,
+      settings: { ...fresh.settings, limsInstanceId: crypto.randomUUID() },
+    };
+    setStore(next);
+    persistStore(next);
   }, []);
 
   const addPatient = useCallback(

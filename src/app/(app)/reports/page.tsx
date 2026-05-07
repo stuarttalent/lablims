@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 
 export default function ReportsPage() {
   const { store } = useData();
@@ -56,11 +55,9 @@ export default function ReportsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
         <p className="text-sm text-muted-foreground">
-          Lightweight operational summaries over seeded demo data.
+          Lightweight operational summaries for finance and supervision.
         </p>
       </div>
-      <DemoDisclaimer variant="compact" />
-
       <Tabs defaultValue="volume">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="volume">Daily volume</TabsTrigger>
@@ -93,7 +90,7 @@ export default function ReportsPage() {
             <CardContent>
               <p className="text-3xl font-semibold">${revenueMonth.toFixed(0)}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Demo USD totals, irrespective of payment status.
+                USD totals, irrespective of payment status.
               </p>
             </CardContent>
           </Card>

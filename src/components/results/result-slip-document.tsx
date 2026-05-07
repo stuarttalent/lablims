@@ -3,7 +3,10 @@
 import { getTestById } from "@/data/catalogue";
 import type { DemoStore, LabOrder, Patient, TestDepartment } from "@/types";
 import { Separator } from "@/components/ui/separator";
-import { DEMO_DISCLAIMER_TEXT } from "@/components/demo/demo-disclaimer";
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
+import Image from "next/image";
+import { buildResultVerificationToken } from "@/lib/verification-token";
 
 const DEPT_ORDER: TestDepartment[] = [
   "Haematology",
@@ -22,6 +25,31 @@ export function ResultSlipDocument({
   patient?: Patient;
   store: DemoStore;
 }) {
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const lims = store.settings.limsInstanceId ?? "";
+    const verifyUrl = `${origin}/verify/${encodeURIComponent(order.id)}?v=${buildResultVerificationToken(order.id, order.createdAt, lims)}`;
+    QRCode.toDataURL(verifyUrl, {
+      width: 132,
+      margin: 1,
+      color: { dark: "#0f172a", light: "#ffffff" },
+      errorCorrectionLevel: "M",
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrSrc(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setQrSrc(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id, order.createdAt, store.settings.limsInstanceId]);
+
   const grouped = new Map<TestDepartment, typeof order.tests>();
   for (const d of DEPT_ORDER) grouped.set(d, []);
   for (const line of order.tests) {
@@ -52,17 +80,29 @@ export function ResultSlipDocument({
           </p>
         </div>
         <div className="text-right space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md inline-block">
-            Demo report only
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-900 bg-teal-50 border border-teal-200 px-2 py-1 rounded-md inline-block">
+            Laboratory report
           </p>
           <p className="font-mono text-sm">{order.id}</p>
           <p className="text-xs text-slate-600">
             Report date: {new Date().toISOString().slice(0, 10)}
           </p>
-          <div className="flex justify-end pt-2">
-            <div className="size-16 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-500 text-center leading-tight">
-              QR placeholder
-            </div>
+          <div className="flex flex-col items-end gap-1 pt-2">
+            {qrSrc ? (
+              <Image
+                src={qrSrc}
+                width={120}
+                height={120}
+                unoptimized
+                alt={`Verification for accession ${order.id}`}
+                className="rounded-md border border-slate-200"
+              />
+            ) : (
+              <div className="size-[120px] rounded-md border border-slate-200 bg-slate-50" />
+            )}
+            <p className="max-w-[140px] text-[9px] leading-tight text-slate-600 text-center">
+              Scan to verify this report online
+            </p>
           </div>
         </div>
       </header>
@@ -157,20 +197,31 @@ export function ResultSlipDocument({
             Date:{" "}
             {order.tests.map((l) => l.verificationDate).filter(Boolean)[0] ?? "—"}
           </p>
+          <p className="mt-2 text-slate-700">
+            Status:{" "}
+            <span className="font-medium">
+              {order.status === "Released" ||
+              order.tests.some((l) => l.resultStatus === "Released")
+                ? "Verified / released"
+                : order.status}
+            </span>
+          </p>
         </div>
         <div>
           <p className="font-semibold text-slate-700">Authorised signature</p>
           <div className="mt-6 border-b border-slate-400 w-48" />
-          <p className="text-[10px] mt-1">Signatory / designation (demo)</p>
+          <p className="text-[10px] mt-1">Authorised signatory &amp; designation</p>
         </div>
       </section>
 
-      <footer className="mt-10 pt-4 border-t border-slate-200 space-y-2 text-[11px] text-amber-900 bg-amber-50 -mx-6 -mb-6 px-6 py-4 rounded-b-xl print:rounded-none">
-        <p className="font-semibold">{DEMO_DISCLAIMER_TEXT}</p>
-        <p className="text-slate-700">
-          Demo report only. Not valid for clinical diagnosis.
+      <footer className="mt-10 pt-4 border-t border-slate-200 space-y-2 text-[11px] text-slate-600 -mx-6 -mb-6 px-6 py-4 rounded-b-xl print:rounded-none bg-slate-50">
+        <p className="text-slate-700">{store.settings.reportFooter}</p>
+        <p>
+          Report authenticity can be confirmed by scanning the QR code, which
+          includes a security code tied to accession{" "}
+          <span className="font-mono font-medium text-slate-900">{order.id}</span>{" "}
+          on this laboratory system.
         </p>
-        <p className="text-slate-600">{store.settings.reportFooter}</p>
       </footer>
     </div>
   );

@@ -12,22 +12,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DemoDisclaimer } from "@/components/demo/demo-disclaimer";
 
 export default function UsersPage() {
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">User management (demo)</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">User management</h1>
         <p className="text-sm text-muted-foreground">
           Static roster aligned with the login screen — no CRUD or password flows.
         </p>
       </div>
-      <DemoDisclaimer variant="inline" />
-
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Demo accounts</CardTitle>
+          <CardTitle className="text-base">Directory</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

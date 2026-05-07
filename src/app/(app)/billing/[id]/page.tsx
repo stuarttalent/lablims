@@ -2,10 +2,6 @@
 
 import { getTestById } from "@/data/catalogue";
 import { useData } from "@/contexts/data-context";
-import {
-  DemoDisclaimer,
-  DEMO_DISCLAIMER_TEXT,
-} from "@/components/demo/demo-disclaimer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -51,10 +47,6 @@ export default function InvoiceDetailPage() {
             <Link href="/billing">Back</Link>
           </Button>
         </div>
-      </div>
-
-      <div className="no-print">
-        <DemoDisclaimer variant="inline" />
       </div>
 
       <Card className="no-print border-border/70 shadow-sm">
@@ -187,9 +179,9 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-lg bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-900/50 p-3 text-xs text-amber-950 dark:text-amber-50">
-          <p className="font-semibold">Demo invoice — not legally binding</p>
-          <p className="mt-1">{DEMO_DISCLAIMER_TEXT}</p>
+        <div className="mt-8 rounded-lg bg-muted/40 border border-border/60 p-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Terms</p>
+          <p className="mt-1">{store.settings.reportFooter}</p>
         </div>
       </div>
     </div>

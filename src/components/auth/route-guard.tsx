@@ -17,7 +17,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     if (!canAccessRoute(user.role, pathname)) {
       if (!shown.current) {
         toast.message("Access restricted", {
-          description: "That module is not enabled for your demo role.",
+          description: "That module is not enabled for your role.",
         });
         shown.current = true;
       }
