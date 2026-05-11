@@ -20,15 +20,49 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (p.startsWith("/catalogue") || p.startsWith("/users")) {
     return hasAdminPrivileges(role);
   }
-  if (p.startsWith("/settings")) {
+
+  if (p.startsWith("/settings") || p.startsWith("/setup") || p.startsWith("/ticket-desk")) {
     return true;
   }
+
+  if (p.startsWith("/security")) {
+    return true;
+  }
+
+  if (p.startsWith("/send-receive") || p.startsWith("/interoperability")) {
+    return hasAdminPrivileges(role) || role === "scientist";
+  }
+
+  if (p.startsWith("/documents")) {
+    return (
+      hasAdminPrivileges(role) ||
+      role === "scientist" ||
+      role === "doctor" ||
+      role === "biller" ||
+      role === "tech"
+    );
+  }
+
+  if (p.startsWith("/maintenance") || p.startsWith("/quality")) {
+    return hasAdminPrivileges(role) || role === "scientist" || role === "tech";
+  }
+
+  if (p.startsWith("/administration")) {
+    return hasAdminPrivileges(role);
+  }
+
+  if (p.startsWith("/inventory")) {
+    return hasAdminPrivileges(role) || role === "scientist" || role === "tech";
+  }
+
   if (p.startsWith("/billing")) {
     return hasAdminPrivileges(role) || role === "biller";
   }
+
   if (p.startsWith("/reports")) {
     return hasAdminPrivileges(role) || role === "scientist" || role === "biller";
   }
+
   return true;
 }
 

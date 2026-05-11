@@ -21,11 +21,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="flex min-h-screen w-full">
-        <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
+        <aside className="hidden lg:flex w-[272px] shrink-0 flex-col border-r border-sidebar-border/90 bg-sidebar text-sidebar-foreground shadow-xl">
           <SidebarNav role={user.role} />
-          <div className="mt-auto p-3 text-[10px] leading-relaxed text-sidebar-foreground/60 border-t border-sidebar-border">
-            Your view matches your role. Advanced modules appear under
-            More tools.
+          <div className="mt-auto shrink-0 border-t border-white/10 px-3 py-2.5 text-[10px] leading-relaxed text-sidebar-foreground/55">
+            Modules match your role. Some links open a placeholder where a full module
+            would integrate (instruments, QC stains, inventory).
           </div>
         </aside>
 
@@ -45,7 +45,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Menu className="size-5" />
                   <span className="sr-only">Open navigation</span>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-72">
+                <SheetContent
+                  side="left"
+                  className="w-[272px] border-sidebar-border/90 bg-sidebar p-0 text-sidebar-foreground"
+                >
                   <SidebarNav role={user.role} />
                 </SheetContent>
               </Sheet>
@@ -69,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               <div className="flex flex-1 sm:flex-none items-center justify-end gap-2 min-w-0">
                 <RoleBadge role={user.role} className="hidden sm:inline-flex" />
-                <div className="hidden md:block text-right min-w-0">
+                <div className="hidden md:block lg:hidden text-right min-w-0">
                   <p className="text-sm font-medium truncate max-w-[12rem]">
                     {user.name}
                   </p>
