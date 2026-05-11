@@ -3,12 +3,19 @@ import type {
   Doctor,
   Invoice,
   LabOrder,
+  OrderTestLine,
   Patient,
 } from "@/types";
+import { ORDER_TEMPLATES } from "@/data/order-templates";
 
 const today = new Date();
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const isoDt = (d: Date) => d.toISOString().slice(0, 16);
+
+function testIdsForTemplate(templateId: string): string[] {
+  const t = ORDER_TEMPLATES.find((x) => x.id === templateId);
+  return t ? [...t.testIds] : [];
+}
 
 export const DEMO_DOCTORS: Doctor[] = [
   { id: "d1", name: "Dr. Brian Mutasa", specialty: "General Practice" },
@@ -160,18 +167,51 @@ export const DEMO_ORDERS: LabOrder[] = [
     requestingDoctor: "Dr. Brian Mutasa",
     collectionDate: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 8, 30)),
     status: "Released",
-    notes: "Fasting lipids requested.",
+    notes: "Fasting lipids requested; panel template.",
     assignedTechId: "u-tech",
     assignedScientistId: "u-scientist",
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 7, 0)),
     tests: [
       {
-        testId: "t-lipid",
+        testId: "t-lipid-total",
         resultValue: "6.9",
         units: "mmol/L",
-        referenceRange: "Total chol < 5.0 mmol/L",
+        referenceRange: "< 5.0 mmol/L",
         flag: "High",
         comment: "↑ Total cholesterol; consider diet/lifestyle review.",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate())),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-hdl",
+        resultValue: "1.1",
+        units: "mmol/L",
+        referenceRange: "> 1.0 mmol/L",
+        flag: "Normal",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate())),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-ldl",
+        resultValue: "4.9",
+        units: "mmol/L",
+        referenceRange: "< 3.0 mmol/L",
+        flag: "High",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate())),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-tg",
+        resultValue: "1.6",
+        units: "mmol/L",
+        referenceRange: "< 1.7 mmol/L",
+        flag: "Normal",
         enteredBy: "Kudzai Makoni",
         verifiedBy: "Dr. Chipo Ndlovu",
         verificationDate: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate())),
@@ -203,15 +243,35 @@ export const DEMO_ORDERS: LabOrder[] = [
     assignedScientistId: "u-scientist",
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15)),
     tests: [
-      {
-        testId: "t-fbc",
-        resultValue: "See manual diff",
-        units: "various",
-        referenceRange: "WBC 4.0–11.0 ×10⁹/L",
-        flag: "Normal",
-        enteredBy: "Kudzai Makoni",
-        resultStatus: "Pending Verification",
-      },
+      ...testIdsForTemplate("fbc-5part").map((tid): OrderTestLine => {
+        if (tid === "t-fbc-wbc") {
+          return {
+            testId: tid,
+            resultValue: "7.2",
+            units: "×10⁹/L",
+            referenceRange: "4.0–11.0 ×10⁹/L",
+            flag: "Normal",
+            enteredBy: "Kudzai Makoni",
+            resultStatus: "Pending Verification",
+          };
+        }
+        if (tid === "t-fbc-hb") {
+          return {
+            testId: tid,
+            resultValue: "11.2",
+            units: "g/dL",
+            referenceRange: "13–17 (M), 12–16 (F) g/dL",
+            flag: "Low",
+            enteredBy: "Kudzai Makoni",
+            resultStatus: "Pending Verification",
+          };
+        }
+        return {
+          testId: tid,
+          enteredBy: "Kudzai Makoni",
+          resultStatus: "Pending Verification",
+        };
+      }),
       {
         testId: "t-esr",
         resultValue: "8",
@@ -235,7 +295,12 @@ export const DEMO_ORDERS: LabOrder[] = [
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 10, 20)),
     tests: [
       { testId: "t-lft", resultStatus: "Draft" },
-      { testId: "t-ue", resultStatus: "Draft" },
+      ...testIdsForTemplate("u-and-e").map(
+        (testId): OrderTestLine => ({
+          testId,
+          resultStatus: "Draft",
+        }),
+      ),
     ],
   },
   {
@@ -285,7 +350,15 @@ export const DEMO_ORDERS: LabOrder[] = [
     collectionDate: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 6, 30)),
     status: "Requested",
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 6, 0)),
-    tests: [{ testId: "t-fbc" }, { testId: "t-crp" }],
+    tests: [
+      ...testIdsForTemplate("fbc-3part").map(
+        (testId): OrderTestLine => ({
+          testId,
+          resultStatus: "Draft",
+        }),
+      ),
+      { testId: "t-crp", resultStatus: "Draft" },
+    ],
   },
   {
     id: "ORD-240507",
@@ -357,7 +430,7 @@ export const DEMO_INVOICES: Invoice[] = [
     invoiceNumber: "INV-2026-0101",
     patientId: "P-1001",
     orderId: "ORD-240501",
-    testIds: ["t-lipid", "t-glucose"],
+    testIds: [...testIdsForTemplate("lipid-profile"), "t-glucose"],
     subtotal: 36,
     discount: 0,
     tax: 0,
@@ -372,7 +445,7 @@ export const DEMO_INVOICES: Invoice[] = [
     invoiceNumber: "INV-2026-0102",
     patientId: "P-1002",
     orderId: "ORD-240502",
-    testIds: ["t-fbc", "t-esr"],
+    testIds: [...testIdsForTemplate("fbc-5part"), "t-esr"],
     subtotal: 26,
     discount: 4,
     tax: 0,
@@ -386,7 +459,7 @@ export const DEMO_INVOICES: Invoice[] = [
     invoiceNumber: "INV-2026-0103",
     patientId: "P-1005",
     orderId: "ORD-240503",
-    testIds: ["t-lft", "t-ue"],
+    testIds: ["t-lft", ...testIdsForTemplate("u-and-e")],
     subtotal: 50,
     discount: 0,
     tax: 0,

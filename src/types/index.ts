@@ -33,6 +33,11 @@ export interface CatalogueTest {
   price: number;
   referenceRange?: string;
   units?: string;
+  /**
+   * When true, hidden from the default new-order and invoice pickers —
+   * add these lines via a panel template instead.
+   */
+  panelAnalyte?: boolean;
 }
 
 /** Gender scope for reference-interval bands (patient gender is normalized to these). */

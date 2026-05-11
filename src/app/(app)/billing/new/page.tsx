@@ -1,6 +1,7 @@
 "use client";
 
-import { TEST_CATALOGUE } from "@/data/catalogue";
+import { testsForOrderPicker } from "@/data/catalogue";
+import { ORDER_TEMPLATES, type OrderTemplate } from "@/data/order-templates";
 import { useData } from "@/contexts/data-context";
 import { resolveTestPrice } from "@/lib/pricing";
 import type { TestDepartment } from "@/types";
@@ -42,10 +43,22 @@ export default function NewInvoicePage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
 
-  const selectedIds = useMemo(
-    () => Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
-    [selected],
-  );
+  const selectedIds = useMemo(() => {
+    const ids = Object.entries(selected)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    return [...new Set(ids)];
+  }, [selected]);
+
+  const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
+
+  function applyTemplate(tpl: OrderTemplate) {
+    setSelected((s) => {
+      const next = { ...s };
+      for (const id of tpl.testIds) next[id] = true;
+      return next;
+    });
+  }
 
   const preview = useMemo(() => {
     const sub = selectedIds.reduce(
@@ -87,7 +100,8 @@ export default function NewInvoicePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New invoice</h1>
         <p className="text-sm text-muted-foreground">
-          Price list honours optional overrides from Settings.
+          Price list honours optional overrides from Settings. Templates add all analyte
+          lines for FBC (3- or 5-part), lipids, or U&amp;E.
         </p>
       </div>
       <Card className="border-border/70 shadow-sm">
@@ -176,11 +190,36 @@ export default function NewInvoicePage() {
 
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
+          <CardTitle className="text-base">Templates</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Full panels at list price (charged on the primary analyte for each panel).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ORDER_TEMPLATES.map((tpl) => (
+              <Button
+                key={tpl.id}
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="text-left h-auto min-h-9 py-2 px-3 whitespace-normal"
+                onClick={() => applyTemplate(tpl)}
+              >
+                <span className="block font-medium leading-snug">{tpl.label}</span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 shadow-sm">
+        <CardHeader>
           <CardTitle className="text-base">Line items</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {DEPT_ORDER.map((dep, idx) => {
-            const items = TEST_CATALOGUE.filter((t) => t.department === dep);
+            const items = pickableCatalogue.filter((t) => t.department === dep);
             if (items.length === 0) return null;
             return (
               <div key={dep}>

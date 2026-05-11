@@ -172,7 +172,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       let order: LabOrder | null = null;
       commit((s) => {
         const id = `ORD-${Date.now().toString().slice(-8)}`;
-        const tests: OrderTestLine[] = input.testIds.map((testId) => ({
+        const uniqueTestIds = [...new Set(input.testIds)];
+        const tests: OrderTestLine[] = uniqueTestIds.map((testId) => ({
           testId,
           resultStatus: "Draft",
         }));
@@ -236,7 +237,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }) => {
       let inv: Invoice | null = null;
       commit((s) => {
-        const subtotal = input.testIds.reduce(
+        const uniqueTestIds = [...new Set(input.testIds)];
+        const subtotal = uniqueTestIds.reduce(
           (sum, tid) => sum + resolveTestPrice(tid, s.settings),
           0,
         );
@@ -248,7 +250,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           invoiceNumber: randomInvoiceNo(),
           patientId: input.patientId,
           orderId: input.orderId,
-          testIds: input.testIds,
+          testIds: uniqueTestIds,
           subtotal,
           discount,
           tax,

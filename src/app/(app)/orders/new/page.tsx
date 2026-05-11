@@ -1,6 +1,7 @@
 "use client";
 
-import { TEST_CATALOGUE } from "@/data/catalogue";
+import { testsForOrderPicker } from "@/data/catalogue";
+import { ORDER_TEMPLATES, type OrderTemplate } from "@/data/order-templates";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
 import { canCreateOrder } from "@/lib/permissions";
@@ -49,10 +50,23 @@ export default function NewOrderPage() {
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
 
-  const selectedIds = useMemo(
-    () => Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
-    [selected],
-  );
+  const selectedIds = useMemo(() => {
+    const ids = Object.entries(selected)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    return [...new Set(ids)];
+  }, [selected]);
+
+  const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
+
+  function applyTemplate(tpl: OrderTemplate) {
+    setSelected((s) => {
+      const next = { ...s };
+      for (const id of tpl.testIds) next[id] = true;
+      return next;
+    });
+    setSampleType(tpl.sampleTypeHint);
+  }
 
   if (!user || !canCreateOrder(user.role)) {
     return (
@@ -101,7 +115,8 @@ export default function NewOrderPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New test request</h1>
         <p className="text-sm text-muted-foreground">
-          Combine multiple analytes in a single collection event.
+          Combine multiple analytes in a single collection event. Use templates below for
+          common panels (FBC 3-part vs 5-part differential, lipids, U&amp;E).
         </p>
       </div>
       <Card className="border-border/70 shadow-sm">
@@ -184,11 +199,41 @@ export default function NewOrderPage() {
 
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
+          <CardTitle className="text-base">Templates</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Adds the analyte lines for that panel. You can still add or remove individual
+            tests in the list below. For FBC, pick either a three-part or a five-part
+            differential (do not mix both unless you intend to report twice).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ORDER_TEMPLATES.map((tpl) => (
+              <Button
+                key={tpl.id}
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="text-left h-auto min-h-9 py-2 px-3 whitespace-normal"
+                onClick={() => applyTemplate(tpl)}
+              >
+                <span className="block font-medium leading-snug">{tpl.label}</span>
+                <span className="block text-[11px] font-normal text-muted-foreground leading-snug mt-0.5">
+                  {tpl.description}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 shadow-sm">
+        <CardHeader>
           <CardTitle className="text-base">Tests</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {DEPT_ORDER.map((dep, idx) => {
-            const items = TEST_CATALOGUE.filter((t) => t.department === dep);
+            const items = pickableCatalogue.filter((t) => t.department === dep);
             if (items.length === 0) return null;
             return (
               <div key={dep}>
