@@ -25,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/lib/app-brand";
 
 const ROLE_ORDER: UserRole[] = [
   "super_admin",
@@ -74,7 +75,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                  LabLIMS
+                  {APP_NAME}
                 </h1>
                 <p className="text-sm text-white/65">
                   Secure sign in — select your account profile

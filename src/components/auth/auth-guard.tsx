@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { LabLoader } from "@/components/ui/lab-loader";
+import { APP_NAME } from "@/lib/app-brand";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -20,7 +21,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50/80 via-background to-slate-50 dark:from-cyan-950/20 dark:via-background dark:to-slate-950/40">
-        <LabLoader className="min-h-0 py-12" message="Preparing your LabLIMS session…" />
+        <LabLoader
+          className="min-h-0 py-12"
+          message={`Preparing your ${APP_NAME} session…`}
+        />
       </div>
     );
   }

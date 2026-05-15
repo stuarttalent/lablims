@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Source_Sans_3, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
+import { APP_NAME } from "@/lib/app-brand";
 
 const sourceSans = Source_Sans_3({
   variable: "--font-source-sans",
@@ -16,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LabLIMS — Laboratory Information System",
+  title: `${APP_NAME} — Laboratory Information System`,
   description:
     "Laboratory information system with HL7 FHIR–oriented interoperability exports.",
 };

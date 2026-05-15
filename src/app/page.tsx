@@ -8,6 +8,7 @@ import { ArrowRight, FlaskConical, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { APP_NAME } from "@/lib/app-brand";
 
 export default function Home() {
   const { user, hydrated } = useAuth();
@@ -21,7 +22,7 @@ export default function Home() {
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <LabLoader message="Starting LabLIMS…" />
+        <LabLoader message={`Starting ${APP_NAME}…`} />
       </div>
     );
   }
@@ -44,7 +45,7 @@ export default function Home() {
             </div>
             <div className="leading-tight">
               <p className="text-base font-semibold tracking-tight text-white">
-                LabLIMS
+                {APP_NAME}
               </p>
               <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/55">
                 Laboratory workspace
@@ -83,7 +84,7 @@ export default function Home() {
                 className="h-12 min-w-[200px] rounded-full px-8 text-base shadow-lg shadow-primary/25"
               >
                 <Link href="/login" className="gap-2">
-                  Sign in to LabLIMS
+                  Sign in to {APP_NAME}
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>

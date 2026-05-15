@@ -1,4 +1,4 @@
-# LabLIMS (demo)
+# ALS Health (demo)
 
 Modern **demo-only** web application simulating a **Laboratory Information Management System (LIMS)** for training and product evaluation. **Not for real clinical or diagnostic use.** Demo disclaimers appear on login, dashboard, result slips, invoices, and PDF exports.
 

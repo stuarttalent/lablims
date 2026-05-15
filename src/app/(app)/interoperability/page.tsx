@@ -8,6 +8,7 @@ import {
   buildServiceRequest,
   resolveFhirBase,
 } from "@/lib/fhir/build-resources";
+import { APP_NAME } from "@/lib/app-brand";
 import { FHIR_VERSION } from "@/lib/fhir/constants";
 import { FhirJsonPanel } from "@/components/fhir/fhir-json-panel";
 import {
@@ -158,7 +159,7 @@ function InteroperabilityInner() {
           </div>
           {order && (
             <Button variant="secondary" asChild>
-              <Link href={`/orders/${order.id}`}>Open order in LIMS</Link>
+              <Link href={`/orders/${order.id}`}>Open order in {APP_NAME}</Link>
             </Button>
           )}
         </CardContent>
