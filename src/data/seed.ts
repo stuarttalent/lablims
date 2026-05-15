@@ -160,6 +160,90 @@ export const DEMO_PATIENTS: Patient[] = [
 
 export const DEMO_ORDERS: LabOrder[] = [
   {
+    id: "ORD-240412",
+    patientId: "P-1001",
+    sampleType: "Serum",
+    priority: "Routine",
+    requestingDoctor: "Dr. Brian Mutasa",
+    collectionDate: isoDt(
+      new Date(today.getFullYear(), today.getMonth() - 6, 14, 9, 0),
+    ),
+    status: "Released",
+    notes: "Annual wellness lipids — prior visit for cumulative comparison.",
+    assignedTechId: "u-tech",
+    assignedScientistId: "u-scientist",
+    createdAt: isoDt(
+      new Date(today.getFullYear(), today.getMonth() - 6, 14, 8, 15),
+    ),
+    tests: [
+      {
+        testId: "t-lipid-total",
+        resultValue: "5.8",
+        units: "mmol/L",
+        referenceRange: "< 5.0 mmol/L",
+        flag: "High",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(
+          new Date(today.getFullYear(), today.getMonth() - 6, 15),
+        ),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-hdl",
+        resultValue: "1.3",
+        units: "mmol/L",
+        referenceRange: "> 1.0 mmol/L",
+        flag: "Normal",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(
+          new Date(today.getFullYear(), today.getMonth() - 6, 15),
+        ),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-ldl",
+        resultValue: "3.9",
+        units: "mmol/L",
+        referenceRange: "< 3.0 mmol/L",
+        flag: "High",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(
+          new Date(today.getFullYear(), today.getMonth() - 6, 15),
+        ),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-lipid-tg",
+        resultValue: "1.4",
+        units: "mmol/L",
+        referenceRange: "< 1.7 mmol/L",
+        flag: "Normal",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(
+          new Date(today.getFullYear(), today.getMonth() - 6, 15),
+        ),
+        resultStatus: "Released",
+      },
+      {
+        testId: "t-glucose",
+        resultValue: "4.9",
+        units: "mmol/L",
+        referenceRange: "Fasting 3.9–5.5 mmol/L",
+        flag: "Normal",
+        enteredBy: "Kudzai Makoni",
+        verifiedBy: "Dr. Chipo Ndlovu",
+        verificationDate: iso(
+          new Date(today.getFullYear(), today.getMonth() - 6, 15),
+        ),
+        resultStatus: "Released",
+      },
+    ],
+  },
+  {
     id: "ORD-240501",
     patientId: "P-1001",
     sampleType: "Serum",

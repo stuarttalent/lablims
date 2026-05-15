@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CumulativeTestsPanel } from "@/components/patients/cumulative-tests-panel";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -207,7 +209,14 @@ export default function PatientProfilePage() {
         </Card>
       </div>
 
-      <Card className="border-border/70 shadow-sm">
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="cumulative">Cumulative tests</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-0">
+          <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Test history</CardTitle>
         </CardHeader>
@@ -248,8 +257,18 @@ export default function PatientProfilePage() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cumulative" className="mt-0">
+          <CumulativeTestsPanel
+            patient={patient}
+            orders={orders}
+            store={store}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

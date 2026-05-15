@@ -17,9 +17,19 @@ function slipPdfFallback(orderId: string) {
   return lines.join("\n");
 }
 
-export function SlipExportActions({ orderId }: { orderId: string }) {
+export function SlipExportActions({
+  orderId,
+  elementId = "lablims-result-slip",
+  fileNamePrefix = "LabReport",
+  emailSubject,
+}: {
+  orderId: string;
+  elementId?: string;
+  fileNamePrefix?: string;
+  emailSubject?: string;
+}) {
   async function pdf() {
-    const el = document.getElementById("lablims-result-slip");
+    const el = document.getElementById(elementId);
     if (!el) {
       toast.error("Report not ready for export.");
       return;
@@ -44,7 +54,7 @@ export function SlipExportActions({ orderId }: { orderId: string }) {
         drawW = imgW * scale;
       }
       pdf.addImage(dataUrl, format, margin, margin, drawW, drawH);
-      pdf.save(`LabReport-${orderId}.pdf`);
+      pdf.save(`${fileNamePrefix}-${orderId}.pdf`);
     };
 
     try {
@@ -77,7 +87,7 @@ export function SlipExportActions({ orderId }: { orderId: string }) {
         scrollX: 0,
         scrollY: -window.scrollY,
         onclone(clonedDoc) {
-          const node = clonedDoc.getElementById("lablims-result-slip");
+          const node = clonedDoc.getElementById(elementId);
           if (!node) return;
           const win = clonedDoc.defaultView;
           if (!win) return;
@@ -110,7 +120,7 @@ export function SlipExportActions({ orderId }: { orderId: string }) {
       const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
       const lines = pdf.splitTextToSize(slipPdfFallback(orderId), 180);
       pdf.text(lines, margin, margin);
-      pdf.save(`LabReport-${orderId}.pdf`);
+      pdf.save(`${fileNamePrefix}-${orderId}.pdf`);
       toast.message("PDF saved as text fallback", {
         description: "Use Print → Save as PDF for the full layout.",
       });
@@ -120,7 +130,9 @@ export function SlipExportActions({ orderId }: { orderId: string }) {
   }
 
   function email() {
-    const subject = encodeURIComponent(`Laboratory report ${orderId}`);
+    const subject = encodeURIComponent(
+      emailSubject ?? `Laboratory report ${orderId}`,
+    );
     window.location.href = `mailto:?subject=${subject}`;
     toast.success("Opening your email app…");
   }
