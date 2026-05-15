@@ -170,24 +170,23 @@ export function SignInPanel({
         </Tabs>
 
         <Collapsible open={demoOpen} onOpenChange={setDemoOpen}>
-          <CollapsibleTrigger asChild>
-            <Button
-              type="button"
-              variant={isMarketing ? "secondary" : "outline"}
+          <CollapsibleTrigger
+            className={cn(
+              "inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              isMarketing
+                ? "border-white/20 bg-white/15 text-white hover:bg-white/20"
+                : "border-input bg-background shadow-xs hover:bg-muted",
+            )}
+          >
+            <KeyRound className="size-4" />
+            Demo credentials
+            <ChevronDown
               className={cn(
-                "w-full gap-2 rounded-xl",
-                isMarketing && "border-white/20 bg-white/15 text-white hover:bg-white/20",
+                "ml-auto size-4 transition-transform",
+                demoOpen && "rotate-180",
               )}
-            >
-              <KeyRound className="size-4" />
-              Demo credentials
-              <ChevronDown
-                className={cn(
-                  "ml-auto size-4 transition-transform",
-                  demoOpen && "rotate-180",
-                )}
-              />
-            </Button>
+            />
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3">
             <div

@@ -4,9 +4,18 @@ import {
   LabModuleTableCard,
   StatusBadge,
 } from "@/components/layout/lab-module-table-card";
-import { INVENTORY_STOCK } from "@/data/lab-module-demo";
+import { INVENTORY_STOCK, type DemoStatus } from "@/data/lab-module-demo";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
+
+function stockTone(
+  status: DemoStatus,
+): "default" | "ok" | "warn" | "critical" {
+  if (status === "ok") return "ok";
+  if (status === "warn") return "warn";
+  if (status === "critical") return "critical";
+  return "default";
+}
 
 export default function InventoryPage() {
   return (
@@ -43,7 +52,7 @@ export default function InventoryPage() {
                   ? "Low"
                   : "Critical"
             }
-            tone={i.status}
+            tone={stockTone(i.status)}
           />,
         ])}
       />
