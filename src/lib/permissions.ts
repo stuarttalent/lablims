@@ -14,6 +14,11 @@ export function hasAdminPrivileges(role: UserRole): boolean {
   return role === "admin" || role === "super_admin";
 }
 
+/** Create staff accounts and assign roles. */
+export function canManageUsers(role: UserRole): boolean {
+  return role === "super_admin";
+}
+
 export function canAccessRoute(role: UserRole, path: string): boolean {
   const p = path.split("?")[0] ?? path;
 
