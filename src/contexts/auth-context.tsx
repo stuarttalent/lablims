@@ -2,8 +2,8 @@
 
 import { MOCK_USERS } from "@/data/mock-users";
 import { validateDemoCredentials } from "@/lib/demo-auth";
-import { createClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getSupabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { fetchProfileForUser, ensureLaboratoryForUser } from "@/lib/supabase/load-store";
 import { profileToMockUser } from "@/lib/supabase/mappers";
 import type { MockUser } from "@/types";
@@ -37,9 +37,9 @@ async function loadUserFromSession(): Promise<{
   user: MockUser | null;
   laboratoryId: string | null;
 }> {
-  if (!isSupabaseConfigured()) return { user: null, laboratoryId: null };
+  const supabase = await getSupabaseClient();
+  if (!supabase) return { user: null, laboratoryId: null };
 
-  const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -57,17 +57,24 @@ async function loadUserFromSession(): Promise<{
   };
 }
 
+const LOCAL_LOGIN_HINT =
+  "Cloud sign-in is not connected. Add Supabase env vars (see .env.example) and redeploy, or use Access demo with password \"demo\".";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<MockUser | null>(null);
   const [laboratoryId, setLaboratoryId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const supabaseEnabled = isSupabaseConfigured();
+  const [supabaseEnabled, setSupabaseEnabled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
 
     async function init() {
-      if (supabaseEnabled) {
+      const config = await getSupabaseConfig();
+      if (!cancelled) setSupabaseEnabled(config.enabled);
+
+      if (config.enabled) {
         try {
           const { user: u, laboratoryId: labId } = await loadUserFromSession();
           if (!cancelled) {
@@ -76,22 +83,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (e) {
           console.error("Supabase auth init failed:", e);
-        } finally {
-          if (!cancelled) setHydrated(true);
         }
 
-        const supabase = createClient();
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange(async () => {
-          const { user: u, laboratoryId: labId } = await loadUserFromSession();
-          setUser(u);
-          setLaboratoryId(labId);
-        });
-        return () => {
-          cancelled = true;
-          subscription.unsubscribe();
-        };
+        const supabase = await getSupabaseClient();
+        if (supabase && !cancelled) {
+          const {
+            data: { subscription },
+          } = supabase.auth.onAuthStateChange(async () => {
+            const { user: u, laboratoryId: labId } = await loadUserFromSession();
+            if (!cancelled) {
+              setUser(u);
+              setLaboratoryId(labId);
+            }
+          });
+          unsubscribe = () => subscription.unsubscribe();
+          setHydrated(true);
+          return;
+        }
       }
 
       try {
@@ -105,46 +113,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const cleanup = init();
+    void init();
     return () => {
       cancelled = true;
-      void cleanup?.then((fn) => fn?.());
+      unsubscribe?.();
     };
-  }, [supabaseEnabled]);
+  }, []);
 
-  const login = useCallback(
-    async (userId: string) => {
-      const mock = MOCK_USERS.find((x) => x.id === userId);
-      if (!mock) {
-        return { ok: false as const, message: "Unknown demo profile." };
+  const login = useCallback(async (userId: string) => {
+    const mock = MOCK_USERS.find((x) => x.id === userId);
+    if (!mock) {
+      return { ok: false as const, message: "Unknown demo profile." };
+    }
+
+    const supabase = await getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: mock.email,
+        password: "demo",
+      });
+      if (error) {
+        return { ok: false as const, message: error.message };
       }
-
-      if (supabaseEnabled) {
-        const supabase = createClient();
-        const { error } = await supabase.auth.signInWithPassword({
-          email: mock.email,
-          password: "demo",
-        });
-        if (error) {
-          return { ok: false as const, message: error.message };
-        }
-        const { user: u, laboratoryId: labId } = await loadUserFromSession();
-        setUser(u);
-        setLaboratoryId(labId);
-        return { ok: true as const };
+      const { user: u, laboratoryId: labId } = await loadUserFromSession();
+      if (!u) {
+        return {
+          ok: false as const,
+          message:
+            "Signed in but no staff profile found. Run the profiles SQL in supabase/migrations/00003_demo_auth_users.sql.",
+        };
       }
-
-      setUser(mock);
-      localStorage.setItem(AUTH_KEY, mock.id);
+      setUser(u);
+      setLaboratoryId(labId);
       return { ok: true as const };
-    },
-    [supabaseEnabled],
-  );
+    }
+
+    setUser(mock);
+    localStorage.setItem(AUTH_KEY, mock.id);
+    return { ok: true as const };
+  }, []);
 
   const loginWithCredentials = useCallback(
     async (email: string, password: string) => {
-      if (supabaseEnabled) {
-        const supabase = createClient();
+      const supabase = await getSupabaseClient();
+      if (supabase) {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
@@ -157,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return {
             ok: false as const,
             message:
-              "Signed in but no staff profile found. Link your user in the profiles table.",
+              "Signed in to Supabase, but no row in public.profiles for this user. In Supabase SQL Editor, link your auth user to profiles (see supabase/migrations/00003_demo_auth_users.sql).",
           };
         }
         setUser(u);
@@ -166,7 +178,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const result = validateDemoCredentials(email, password);
-      if (!result.ok) return result;
+      if (!result.ok) {
+        if (result.message === "No account found for this email address.") {
+          return { ok: false as const, message: `${result.message} ${LOCAL_LOGIN_HINT}` };
+        }
+        return result;
+      }
       const u = MOCK_USERS.find((x) => x.id === result.userId);
       if (!u) {
         return { ok: false as const, message: "Account could not be loaded." };
@@ -175,18 +192,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(AUTH_KEY, u.id);
       return { ok: true as const };
     },
-    [supabaseEnabled],
+    [],
   );
 
   const logout = useCallback(async () => {
-    if (supabaseEnabled) {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-    }
+    const supabase = await getSupabaseClient();
+    if (supabase) await supabase.auth.signOut();
     setUser(null);
     setLaboratoryId(null);
     localStorage.removeItem(AUTH_KEY);
-  }, [supabaseEnabled]);
+  }, []);
 
   const value = useMemo(
     () => ({

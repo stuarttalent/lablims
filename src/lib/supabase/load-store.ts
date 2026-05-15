@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import {
   buildProfileMaps,
   mapDoctor,
@@ -25,7 +25,8 @@ export type LoadedSupabaseStore = {
 export async function loadStoreFromSupabase(
   laboratoryId: string,
 ): Promise<LoadedSupabaseStore> {
-  const supabase = createClient();
+  const supabase = await getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client is not available");
 
   const [
     settingsRes,
@@ -114,7 +115,8 @@ export async function loadStoreFromSupabase(
 }
 
 export async function fetchProfileForUser(userId: string) {
-  const supabase = createClient();
+  const supabase = await getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client is not available");
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -129,7 +131,8 @@ export async function ensureLaboratoryForUser(userId: string): Promise<string> {
   const profile = await fetchProfileForUser(userId);
   if (profile?.laboratory_id) return profile.laboratory_id;
 
-  const supabase = createClient();
+  const supabase = await getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client is not available");
   const { data: lab, error: labErr } = await supabase
     .from("laboratories")
     .insert({ slug: "main", name: "ALS Health Laboratory" })

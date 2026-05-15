@@ -19,7 +19,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export function CredentialsSignInForm() {
-  const { loginWithCredentials } = useAuth();
+  const { loginWithCredentials, supabaseEnabled, hydrated } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +44,19 @@ export function CredentialsSignInForm() {
 
   return (
     <div className="space-y-4">
+      {hydrated ? (
+        <p
+          className={`rounded-lg border px-3 py-2 text-center text-xs ${
+            supabaseEnabled
+              ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+              : "border-amber-400/30 bg-amber-500/10 text-amber-100"
+          }`}
+        >
+          {supabaseEnabled
+            ? "Cloud database connected — sign in with your Supabase account."
+            : "Offline mode — only built-in demo emails work (password: demo). Add Supabase env vars to use your account."}
+        </p>
+      ) : null}
       <Card className="border-white/15 bg-white/10 shadow-2xl backdrop-blur-xl">
         <CardHeader className="space-y-1 pb-4">
           <CardTitle className="text-xl text-white">Sign in</CardTitle>

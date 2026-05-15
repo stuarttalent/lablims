@@ -1,4 +1,10 @@
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
+
+async function db() {
+  const client = await getSupabaseClient();
+  if (!client) throw new Error("Supabase is not configured");
+  return client;
+}
 import type { ProfileMaps } from "@/lib/supabase/mappers";
 import type {
   Invoice,
@@ -22,7 +28,7 @@ async function resolvePatientUuid(
   appPatientId: string,
 ): Promise<string | null> {
   if (ctx.patientUuid.has(appPatientId)) return ctx.patientUuid.get(appPatientId)!;
-  const supabase = createClient();
+  const supabase = await db();
   const { data } = await supabase
     .from("patients")
     .select("id")
@@ -41,7 +47,7 @@ async function resolveOrderUuid(
   appOrderId: string,
 ): Promise<string | null> {
   if (ctx.orderUuid.has(appOrderId)) return ctx.orderUuid.get(appOrderId)!;
-  const supabase = createClient();
+  const supabase = await db();
   const { data } = await supabase
     .from("lab_orders")
     .select("id")
@@ -67,7 +73,7 @@ export async function persistPatientInsert(
   ctx: SupabaseContext,
   patient: Patient,
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = await db();
   const { data, error } = await supabase
     .from("patients")
     .insert({
@@ -96,7 +102,7 @@ export async function persistPatientUpdate(
 ): Promise<void> {
   const uuid = await resolvePatientUuid(ctx, id);
   if (!uuid) return;
-  const supabase = createClient();
+  const supabase = await db();
   const row: Record<string, unknown> = {};
   if (patch.fullName != null) row.full_name = patch.fullName;
   if (patch.dateOfBirth != null) row.date_of_birth = patch.dateOfBirth;
@@ -118,7 +124,7 @@ export async function persistOrderInsert(
   const patientUuid = await resolvePatientUuid(ctx, order.patientId);
   if (!patientUuid) throw new Error("Patient not found for order.");
 
-  const supabase = createClient();
+  const supabase = await db();
   const { data, error } = await supabase
     .from("lab_orders")
     .insert({
@@ -182,7 +188,7 @@ export async function persistOrderUpdate(
 ): Promise<void> {
   const uuid = await resolveOrderUuid(ctx, id);
   if (!uuid) return;
-  const supabase = createClient();
+  const supabase = await db();
   const row: Record<string, unknown> = {};
   if (patch.sampleType != null) row.sample_type = patch.sampleType;
   if (patch.priority != null) row.priority = patch.priority;
@@ -223,7 +229,7 @@ export async function persistOrderLineUpdate(
 ): Promise<void> {
   const orderUuid = await resolveOrderUuid(ctx, orderId);
   if (!orderUuid) return;
-  const supabase = createClient();
+  const supabase = await db();
   const row: Record<string, unknown> = {};
   if (patch.resultValue !== undefined) row.result_value = patch.resultValue ?? null;
   if (patch.units !== undefined) row.units = patch.units ?? null;
@@ -273,7 +279,7 @@ export async function persistInvoiceInsert(
     ? await resolveOrderUuid(ctx, invoice.orderId)
     : null;
 
-  const supabase = createClient();
+  const supabase = await db();
   const { error } = await supabase.from("invoices").insert({
     laboratory_id: ctx.laboratoryId,
     legacy_id: invoice.id,
@@ -297,7 +303,7 @@ export async function persistInvoiceUpdate(
   id: string,
   patch: Partial<Invoice>,
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = await db();
   const { data } = await supabase
     .from("invoices")
     .select("id")
@@ -322,7 +328,7 @@ export async function persistSettingsUpdate(
   laboratoryId: string,
   patch: Partial<LabSettings>,
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = await db();
   const row: Record<string, unknown> = {};
   if (patch.labName != null) row.lab_name = patch.labName;
   if (patch.tagline != null) row.tagline = patch.tagline;

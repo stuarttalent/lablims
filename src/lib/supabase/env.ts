@@ -1,6 +1,6 @@
+import { isSupabaseConfiguredAtBuild } from "@/lib/supabase/config";
+
+/** True when env vars were present at build time. Runtime may still enable Supabase via API. */
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  return isSupabaseConfiguredAtBuild();
 }

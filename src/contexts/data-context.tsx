@@ -3,7 +3,6 @@
 import { createInitialStore } from "@/data/seed";
 import { persistStore, loadStoredStore } from "@/lib/storage";
 import { resolveTestPrice } from "@/lib/pricing";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loadStoreFromSupabase } from "@/lib/supabase/load-store";
 import type { SupabaseContext } from "@/lib/supabase/persist";
 import {
