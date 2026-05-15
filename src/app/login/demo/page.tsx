@@ -1,16 +1,16 @@
 "use client";
 
-import { CredentialsSignInForm } from "@/components/auth/credentials-sign-in-form";
+import { DemoAccountsPanel } from "@/components/auth/demo-accounts-panel";
 import { LabMarketingShell } from "@/components/layout/lab-marketing-shell";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/app-brand";
-import { ArrowLeft, Stethoscope } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export default function LoginPage() {
+export default function LoginDemoPage() {
   const { user, hydrated } = useAuth();
   const router = useRouter();
 
@@ -21,36 +21,27 @@ export default function LoginPage() {
   return (
     <LabMarketingShell variant="auth">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8 sm:px-6 sm:py-10">
-        <header className="mb-8 flex flex-col gap-4">
+        <header className="mb-8">
           <Button
             asChild
             variant="outline"
             size="sm"
             className="w-fit gap-2 rounded-full border-white/25 bg-white/10 text-white backdrop-blur-md hover:bg-white/15 hover:text-white"
           >
-            <Link href="/">
+            <Link href="/login">
               <ArrowLeft className="size-4" />
-              Back to home
+              Back to sign in
             </Link>
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/25 shadow-lg backdrop-blur-md">
-              <Stethoscope className="size-7" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                {APP_NAME}
-              </h1>
-              <p className="text-sm text-white/65">Staff sign in</p>
-            </div>
-          </div>
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white">
+            {APP_NAME} demo
+          </h1>
+          <p className="mt-1 text-sm text-white/65">
+            Choose a demo account to continue
+          </p>
         </header>
 
-        <CredentialsSignInForm />
-
-        <p className="mt-8 text-center text-xs text-white/50">
-          For authorized laboratory staff only.
-        </p>
+        <DemoAccountsPanel />
       </div>
     </LabMarketingShell>
   );

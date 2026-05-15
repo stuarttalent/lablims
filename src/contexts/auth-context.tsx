@@ -1,6 +1,7 @@
 "use client";
 
 import { MOCK_USERS } from "@/data/mock-users";
+import { validateDemoCredentials } from "@/lib/demo-auth";
 import type { MockUser } from "@/types";
 import {
   createContext,
@@ -17,6 +18,10 @@ type AuthContextValue = {
   user: MockUser | null;
   hydrated: boolean;
   login: (userId: string) => void;
+  loginWithCredentials: (
+    email: string,
+    password: string,
+  ) => { ok: true } | { ok: false; message: string };
   logout: () => void;
 };
 
@@ -45,14 +50,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(AUTH_KEY, u.id);
   }, []);
 
+  const loginWithCredentials = useCallback(
+    (email: string, password: string) => {
+      const result = validateDemoCredentials(email, password);
+      if (!result.ok) return result;
+      const u = MOCK_USERS.find((x) => x.id === result.userId);
+      if (!u) {
+        return { ok: false as const, message: "Account could not be loaded." };
+      }
+      setUser(u);
+      localStorage.setItem(AUTH_KEY, u.id);
+      return { ok: true as const };
+    },
+    [],
+  );
+
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_KEY);
   }, []);
 
   const value = useMemo(
-    () => ({ user, hydrated, login, logout }),
-    [user, hydrated, login, logout],
+    () => ({ user, hydrated, login, loginWithCredentials, logout }),
+    [user, hydrated, login, loginWithCredentials, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
