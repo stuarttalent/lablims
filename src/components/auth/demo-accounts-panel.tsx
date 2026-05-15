@@ -31,8 +31,12 @@ export function DemoAccountsPanel() {
   const { login } = useAuth();
   const router = useRouter();
 
-  function signInAs(userId: string) {
-    login(userId);
+  async function signInAs(userId: string) {
+    const result = await login(userId);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
     toast.success("Demo session started.");
     router.push("/dashboard");
   }

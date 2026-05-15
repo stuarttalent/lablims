@@ -25,14 +25,14 @@ export function CredentialsSignInForm() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !password) {
       toast.error("Enter your email and password.");
       return;
     }
     setSubmitting(true);
-    const result = loginWithCredentials(email, password);
+    const result = await loginWithCredentials(email, password);
     setSubmitting(false);
     if (!result.ok) {
       toast.error(result.message);

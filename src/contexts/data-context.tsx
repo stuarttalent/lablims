@@ -3,6 +3,20 @@
 import { createInitialStore } from "@/data/seed";
 import { persistStore, loadStoredStore } from "@/lib/storage";
 import { resolveTestPrice } from "@/lib/pricing";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { loadStoreFromSupabase } from "@/lib/supabase/load-store";
+import type { SupabaseContext } from "@/lib/supabase/persist";
+import {
+  persistInvoiceInsert,
+  persistInvoiceUpdate,
+  persistOrderInsert,
+  persistOrderLineUpdate,
+  persistOrderUpdate,
+  persistPatientInsert,
+  persistPatientUpdate,
+  persistSettingsUpdate,
+} from "@/lib/supabase/persist";
+import { useAuth } from "@/contexts/auth-context";
 import type {
   DemoStore,
   Invoice,
@@ -18,9 +32,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   startTransition,
 } from "react";
+import { toast } from "sonner";
 
 function nextPatientId(patients: Patient[]): string {
   const nums = patients
@@ -36,9 +52,15 @@ function randomInvoiceNo(): string {
   return `INV-${y}-${n}`;
 }
 
+function syncError(action: string, err: unknown) {
+  console.error(`Supabase ${action} failed:`, err);
+  toast.error(`Could not save to cloud (${action}).`);
+}
+
 type DataContextValue = {
   store: DemoStore;
   hydrated: boolean;
+  dataSource: "local" | "supabase";
   resetDemoData: () => void;
   addPatient: (p: Omit<Patient, "id" | "createdAt"> & Partial<Pick<Patient, "id">>) => Patient;
   updatePatient: (id: string, patch: Partial<Patient>) => void;
@@ -78,55 +100,97 @@ type DataContextValue = {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { user, laboratoryId, hydrated: authHydrated, supabaseEnabled } = useAuth();
   const [store, setStore] = useState<DemoStore>(() => createInitialStore());
   const [hydrated, setHydrated] = useState(false);
+  const [dataSource, setDataSource] = useState<"local" | "supabase">("local");
+  const supabaseCtxRef = useRef<SupabaseContext | null>(null);
+
+  const useSupabase = supabaseEnabled && Boolean(user && laboratoryId);
 
   useEffect(() => {
-    const saved = loadStoredStore();
-    startTransition(() => {
-      const defaults = createInitialStore();
-      if (saved) {
-        const settings = {
-          ...defaults.settings,
-          ...saved.settings,
-          catalogueOverrides: {
-            ...defaults.settings.catalogueOverrides,
-            ...(saved.settings.catalogueOverrides ?? {}),
-          },
-        };
-        let next: DemoStore = { ...saved, settings };
-        if (!settings.limsInstanceId) {
+    if (!authHydrated) return;
+
+    let cancelled = false;
+
+    async function load() {
+      if (useSupabase && laboratoryId) {
+        try {
+          const { store: remote, ctx } = await loadStoreFromSupabase(laboratoryId);
+          if (!cancelled) {
+            supabaseCtxRef.current = ctx;
+            setStore(remote);
+            setDataSource("supabase");
+          }
+        } catch (e) {
+          console.error("Failed to load from Supabase:", e);
+          toast.error("Could not load laboratory data from Supabase.");
+          if (!cancelled) {
+            supabaseCtxRef.current = null;
+            setDataSource("local");
+          }
+        } finally {
+          if (!cancelled) setHydrated(true);
+        }
+        return;
+      }
+
+      supabaseCtxRef.current = null;
+      const saved = loadStoredStore();
+      startTransition(() => {
+        const defaults = createInitialStore();
+        if (saved) {
+          const settings = {
+            ...defaults.settings,
+            ...saved.settings,
+            catalogueOverrides: {
+              ...defaults.settings.catalogueOverrides,
+              ...(saved.settings.catalogueOverrides ?? {}),
+            },
+          };
+          let next: DemoStore = { ...saved, settings };
+          if (!settings.limsInstanceId) {
+            const limsInstanceId = crypto.randomUUID();
+            next = { ...saved, settings: { ...settings, limsInstanceId } };
+            persistStore(next);
+          }
+          setStore(next);
+        } else {
           const limsInstanceId = crypto.randomUUID();
-          next = {
-            ...saved,
-            settings: { ...settings, limsInstanceId },
+          const fresh = createInitialStore();
+          const next: DemoStore = {
+            ...fresh,
+            settings: { ...fresh.settings, limsInstanceId },
           };
           persistStore(next);
+          setStore(next);
         }
-        setStore(next);
-      } else {
-        const limsInstanceId = crypto.randomUUID();
-        const fresh = createInitialStore();
-        const next: DemoStore = {
-          ...fresh,
-          settings: { ...fresh.settings, limsInstanceId },
-        };
-        persistStore(next);
-        setStore(next);
-      }
-      setHydrated(true);
-    });
-  }, []);
+        setDataSource("local");
+        setHydrated(true);
+      });
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [authHydrated, useSupabase, laboratoryId]);
 
   const commit = useCallback((updater: (s: DemoStore) => DemoStore) => {
     setStore((s) => {
       const next = updater(s);
-      persistStore(next);
+      if (!useSupabase) persistStore(next);
       return next;
     });
-  }, []);
+  }, [useSupabase]);
 
   const resetDemoData = useCallback(() => {
+    if (useSupabase) {
+      toast.message("Reset is not available while using Supabase.", {
+        description: "Manage data in the Supabase dashboard or SQL editor.",
+      });
+      return;
+    }
     const fresh = createInitialStore();
     const next: DemoStore = {
       ...fresh,
@@ -134,7 +198,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     setStore(next);
     persistStore(next);
-  }, []);
+  }, [useSupabase]);
 
   const addPatient = useCallback(
     (
@@ -150,6 +214,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
         return { ...s, patients: [...s.patients, created] };
       });
+      const ctx = supabaseCtxRef.current;
+      if (ctx && created) {
+        void persistPatientInsert(ctx, created).catch((e) =>
+          syncError("add patient", e),
+        );
+      }
       return created!;
     },
     [commit],
@@ -161,6 +231,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ...s,
         patients: s.patients.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       }));
+      const ctx = supabaseCtxRef.current;
+      if (ctx) {
+        void persistPatientUpdate(ctx, id, patch).catch((e) =>
+          syncError("update patient", e),
+        );
+      }
     },
     [commit],
   );
@@ -193,6 +269,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
         return { ...s, orders: [...s.orders, order] };
       });
+      const ctx = supabaseCtxRef.current;
+      if (ctx && order) {
+        void persistOrderInsert(ctx, order).catch((e) => syncError("add order", e));
+      }
       return order!;
     },
     [commit],
@@ -204,6 +284,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ...s,
         orders: s.orders.map((o) => (o.id === id ? { ...o, ...patch } : o)),
       }));
+      const ctx = supabaseCtxRef.current;
+      if (ctx) {
+        void persistOrderUpdate(ctx, id, patch).catch((e) =>
+          syncError("update order", e),
+        );
+      }
     },
     [commit],
   );
@@ -222,6 +308,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           };
         }),
       }));
+      const ctx = supabaseCtxRef.current;
+      if (ctx) {
+        void persistOrderLineUpdate(ctx, orderId, testId, patch).catch((e) =>
+          syncError("update result", e),
+        );
+      }
     },
     [commit],
   );
@@ -261,6 +353,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
         return { ...s, invoices: [...s.invoices, inv] };
       });
+      const ctx = supabaseCtxRef.current;
+      if (ctx && inv) {
+        void persistInvoiceInsert(ctx, inv).catch((e) =>
+          syncError("add invoice", e),
+        );
+      }
       return inv!;
     },
     [commit],
@@ -286,6 +384,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ...s,
         invoices: s.invoices.map((i) => (i.id === id ? { ...i, ...patch } : i)),
       }));
+      const ctx = supabaseCtxRef.current;
+      if (ctx) {
+        void persistInvoiceUpdate(ctx, id, patch).catch((e) =>
+          syncError("update invoice", e),
+        );
+      }
     },
     [commit],
   );
@@ -296,14 +400,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ...s,
         settings: { ...s.settings, ...patch },
       }));
+      if (laboratoryId && useSupabase) {
+        void persistSettingsUpdate(laboratoryId, patch).catch((e) =>
+          syncError("update settings", e),
+        );
+      }
     },
-    [commit],
+    [commit, laboratoryId, useSupabase],
   );
 
   const value = useMemo(
     () => ({
       store,
       hydrated,
+      dataSource,
       resetDemoData,
       addPatient,
       updatePatient,
@@ -317,6 +427,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       store,
       hydrated,
+      dataSource,
       resetDemoData,
       addPatient,
       updatePatient,
