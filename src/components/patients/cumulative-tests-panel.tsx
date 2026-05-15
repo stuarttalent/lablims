@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { buildCumulativeTestMatrix } from "@/lib/cumulative-tests";
+import { useEffect, useMemo, useState } from "react";
+import {
+  buildCumulativeTestMatrix,
+  listCumulativeTestRuns,
+} from "@/lib/cumulative-tests";
+import { matrixToCumulativeAiInput } from "@/lib/cumulative-ai-comment";
 import {
   CumulativeTestsSlip,
   CUMULATIVE_SLIP_ELEMENT_ID,
@@ -10,6 +14,15 @@ import { SlipExportActions } from "@/components/results/slip-export-actions";
 import type { DemoStore, LabOrder, Patient } from "@/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Sparkles } from "lucide-react";
 
 export function CumulativeTestsPanel({
   patient,
@@ -20,10 +33,27 @@ export function CumulativeTestsPanel({
   orders: LabOrder[];
   store: DemoStore;
 }) {
-  const matrix = useMemo(
-    () => buildCumulativeTestMatrix(orders),
-    [orders],
-  );
+  const runs = useMemo(() => listCumulativeTestRuns(orders), [orders]);
+  const [selectedRunId, setSelectedRunId] = useState<string>("");
+  const [aiComment, setAiComment] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    if (runs.length === 0) {
+      setSelectedRunId("");
+      return;
+    }
+    setSelectedRunId((prev) =>
+      runs.some((r) => r.id === prev) ? prev : runs[0]!.id,
+    );
+  }, [runs]);
+
+  const selectedRun = runs.find((r) => r.id === selectedRunId);
+
+  const matrix = useMemo(() => {
+    if (!selectedRun) return null;
+    return buildCumulativeTestMatrix(orders, selectedRun);
+  }, [orders, selectedRun]);
 
   const generatedOn = useMemo(
     () =>
@@ -35,16 +65,47 @@ export function CumulativeTestsPanel({
     [],
   );
 
-  if (!matrix) {
+  useEffect(() => {
+    if (!matrix || matrix.columns.length < 2) {
+      setAiComment(null);
+      return;
+    }
+
+    let cancelled = false;
+    setAiLoading(true);
+
+    const payload = matrixToCumulativeAiInput(matrix, patient);
+
+    fetch("/api/ai/cumulative-comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((data: { comment?: string }) => {
+        if (!cancelled) setAiComment(data.comment ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAiComment(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAiLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [matrix, patient]);
+
+  if (runs.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-6 py-10 text-center">
         <p className="text-sm font-medium text-foreground">
-          No cumulative history yet
+          No repeatable test runs yet
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          This view needs at least one order with entered results. When the same
-          parameters are reported on multiple visits, they appear side by side
-          here.
+          Cumulative slips compare the same test (or panel) run on two or more
+          visits. Enter results on matching orders for this patient first.
         </p>
         {orders.length > 0 ? (
           <Button size="sm" variant="outline" className="mt-4" asChild>
@@ -55,37 +116,66 @@ export function CumulativeTestsPanel({
     );
   }
 
-  const needsMoreVisits = matrix.columns.length < 2;
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {matrix.rows.length} parameter
-            {matrix.rows.length === 1 ? "" : "s"} across {matrix.columns.length}{" "}
-            visit{matrix.columns.length === 1 ? "" : "s"}
-          </p>
-          {needsMoreVisits ? (
-            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
-              Add another visit with results to compare trends side by side.
+      <div className="flex flex-col gap-4 no-print sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2 min-w-[min(100%,16rem)]">
+          <Label htmlFor="cumulative-run">Test run</Label>
+          <Select
+            value={selectedRunId}
+            onValueChange={(v) => v && setSelectedRunId(v)}
+          >
+            <SelectTrigger id="cumulative-run" className="w-full sm:w-[320px]">
+              <SelectValue placeholder="Select test run" />
+            </SelectTrigger>
+            <SelectContent>
+              {runs.map((run) => (
+                <SelectItem key={run.id} value={run.id}>
+                  {run.label} ({run.visitCount} visits)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedRun ? (
+            <p className="text-xs text-muted-foreground">
+              {selectedRun.visitCount} visits with results for this panel
             </p>
           ) : null}
         </div>
-        <SlipExportActions
-          orderId={patient.id}
-          elementId={CUMULATIVE_SLIP_ELEMENT_ID}
-          fileNamePrefix="CumulativeReport"
-          emailSubject={`Cumulative laboratory report — ${patient.fullName} (${patient.id})`}
-        />
+
+        {matrix ? (
+          <SlipExportActions
+            orderId={`${patient.id}-${matrix.runId}`}
+            elementId={CUMULATIVE_SLIP_ELEMENT_ID}
+            fileNamePrefix="CumulativeReport"
+            emailSubject={`Cumulative ${matrix.runLabel} — ${patient.fullName} (${patient.id})`}
+          />
+        ) : null}
       </div>
 
-      <CumulativeTestsSlip
-        patient={patient}
-        store={store}
-        matrix={matrix}
-        generatedOn={generatedOn}
-      />
+      {matrix ? (
+        <>
+          {aiLoading ? (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground no-print">
+              <Loader2 className="size-3.5 animate-spin" />
+              Generating cumulative trend comment…
+            </p>
+          ) : aiComment ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground no-print">
+              <Sparkles className="size-3.5" />
+              AI trend summary included on slip below
+            </p>
+          ) : null}
+
+          <CumulativeTestsSlip
+            patient={patient}
+            store={store}
+            matrix={matrix}
+            generatedOn={generatedOn}
+            aiComment={aiComment}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
