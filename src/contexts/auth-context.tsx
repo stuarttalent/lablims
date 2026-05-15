@@ -2,6 +2,7 @@
 
 import { MOCK_USERS } from "@/data/mock-users";
 import { validateDemoCredentials } from "@/lib/demo-auth";
+import { useInitialSupabaseConfig } from "@/contexts/supabase-config-context";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { fetchProfileForUser, ensureLaboratoryForUser } from "@/lib/supabase/load-store";
@@ -58,13 +59,16 @@ async function loadUserFromSession(): Promise<{
 }
 
 const LOCAL_LOGIN_HINT =
-  "Cloud sign-in is not connected. Add Supabase env vars (see .env.example) and redeploy, or use Access demo with password \"demo\".";
+  'Create a file named .env.local in the project root (same folder as package.json) with NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from Supabase → Project Settings → API, then restart "npm run dev". Or use Access demo (password "demo").';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const initialSupabase = useInitialSupabaseConfig();
   const [user, setUser] = useState<MockUser | null>(null);
   const [laboratoryId, setLaboratoryId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const [supabaseEnabled, setSupabaseEnabled] = useState(false);
+  const [supabaseEnabled, setSupabaseEnabled] = useState(
+    () => initialSupabase?.enabled ?? false,
+  );
 
   useEffect(() => {
     let cancelled = false;

@@ -1,3 +1,5 @@
+import { resolveSupabaseEnv } from "@/lib/supabase/resolve-env";
+
 export type SupabaseRuntimeConfig = {
   enabled: boolean;
   url: string;
@@ -7,23 +9,26 @@ export type SupabaseRuntimeConfig = {
 let cached: SupabaseRuntimeConfig | null = null;
 let inflight: Promise<SupabaseRuntimeConfig> | null = null;
 
+/** Set from server layout so the client does not depend on a client-side env bundle. */
+export function seedSupabaseConfig(config: SupabaseRuntimeConfig) {
+  if (config.enabled) cached = config;
+}
+
 /** Build-time check (may be false on Vercel until redeploy). */
 export function isSupabaseConfiguredAtBuild(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  return resolveSupabaseEnv().enabled;
 }
 
 /** Resolves config from env or /api/supabase/config (runtime). */
 export async function getSupabaseConfig(): Promise<SupabaseRuntimeConfig> {
-  if (cached) return cached;
+  if (cached?.enabled) return cached;
 
-  if (isSupabaseConfiguredAtBuild()) {
+  const buildTime = resolveSupabaseEnv();
+  if (buildTime.enabled) {
     cached = {
       enabled: true,
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      url: buildTime.url,
+      anonKey: buildTime.anonKey,
     };
     return cached;
   }

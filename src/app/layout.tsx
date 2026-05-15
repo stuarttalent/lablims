@@ -3,6 +3,7 @@ import { Source_Sans_3, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { APP_NAME } from "@/lib/app-brand";
+import { getServerSupabaseConfig } from "@/lib/supabase/server-config";
 
 const sourceSans = Source_Sans_3({
   variable: "--font-source-sans",
@@ -27,13 +28,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabaseConfig = getServerSupabaseConfig();
+
   return (
     <html
       lang="en"
       className={`${sourceSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders supabaseConfig={supabaseConfig}>{children}</AppProviders>
       </body>
     </html>
   );

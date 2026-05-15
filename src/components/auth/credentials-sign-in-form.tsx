@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { useInitialSupabaseConfig } from "@/contexts/supabase-config-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,8 @@ import { toast } from "sonner";
 
 export function CredentialsSignInForm() {
   const { loginWithCredentials, supabaseEnabled, hydrated } = useAuth();
+  const initialSupabase = useInitialSupabaseConfig();
+  const cloudConnected = supabaseEnabled || initialSupabase?.enabled;
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,14 +50,14 @@ export function CredentialsSignInForm() {
       {hydrated ? (
         <p
           className={`rounded-lg border px-3 py-2 text-center text-xs ${
-            supabaseEnabled
+            cloudConnected
               ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
               : "border-amber-400/30 bg-amber-500/10 text-amber-100"
           }`}
         >
-          {supabaseEnabled
+          {cloudConnected
             ? "Cloud database connected — sign in with your Supabase account."
-            : "Offline mode — only built-in demo emails work (password: demo). Add Supabase env vars to use your account."}
+            : "Offline mode — add .env.local in the project root with your Supabase URL and anon key, then restart the dev server."}
         </p>
       ) : null}
       <Card className="border-white/15 bg-white/10 shadow-2xl backdrop-blur-xl">
