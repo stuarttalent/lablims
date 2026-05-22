@@ -18,7 +18,14 @@ import type { PaymentMethod, PaymentStatus } from "@/types";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { Printer } from "lucide-react";
+import { MedicalAidDetailsForm } from "@/components/billing/medical-aid-details-form";
+import {
+  emptyMedicalAidDetails,
+  hasMedicalAidDetails,
+  resolvePrincipalMember,
+} from "@/lib/medical-aid";
 import { resolveTestPrice } from "@/lib/pricing";
+import type { MedicalAidDetails } from "@/types";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -76,12 +83,15 @@ export default function InvoiceDetailPage() {
             <Label>Method</Label>
             <Select
               value={inv.paymentMethod ?? "none"}
-              onValueChange={(v) =>
+              onValueChange={(v) => {
+                const method = v === "none" ? undefined : (v as PaymentMethod);
                 updateInvoice(inv.id, {
-                  paymentMethod:
-                    v === "none" ? undefined : (v as PaymentMethod),
-                })
-              }
+                  paymentMethod: method,
+                  ...(method === "Medical Aid" && !inv.medicalAidDetails
+                    ? { medicalAidDetails: emptyMedicalAidDetails() }
+                    : {}),
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -109,6 +119,24 @@ export default function InvoiceDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {inv.paymentMethod === "Medical Aid" ||
+      hasMedicalAidDetails(inv.medicalAidDetails) ? (
+        <Card className="no-print border-border/70 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Medical aid claim</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MedicalAidDetailsForm
+              value={inv.medicalAidDetails ?? emptyMedicalAidDetails()}
+              onChange={(next: MedicalAidDetails) =>
+                updateInvoice(inv.id, { medicalAidDetails: next })
+              }
+              patientFullName={patient?.fullName ?? ""}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div
         id="invoice-print"
@@ -146,6 +174,38 @@ export default function InvoiceDetailPage() {
             <p className="font-medium">{inv.orderId ?? "—"}</p>
           </div>
         </div>
+
+        {hasMedicalAidDetails(inv.medicalAidDetails) && inv.medicalAidDetails ? (
+          <div className="mt-4 rounded-lg border border-border/60 bg-muted/30 p-3 text-sm grid gap-2 sm:grid-cols-2">
+            <p className="sm:col-span-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Medical aid
+            </p>
+            <div>
+              <p className="text-xs text-muted-foreground">Society</p>
+              <p className="font-medium">{inv.medicalAidDetails.society || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Plan</p>
+              <p className="font-medium">{inv.medicalAidDetails.plan || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Member number</p>
+              <p className="font-mono font-medium">
+                {inv.medicalAidDetails.memberNumber || "—"}
+                {inv.medicalAidDetails.suffix
+                  ? ` / ${inv.medicalAidDetails.suffix}`
+                  : ""}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Principal member</p>
+              <p className="font-medium">
+                {resolvePrincipalMember(inv.medicalAidDetails, patient?.fullName ?? "") ||
+                  "—"}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6 space-y-2">
           <p className="text-sm font-medium">Tests billed</p>

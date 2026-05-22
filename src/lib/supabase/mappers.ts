@@ -198,6 +198,7 @@ export function mapInvoice(
     payment_method: Invoice["paymentMethod"] | null;
     payment_status: Invoice["paymentStatus"];
     receipt_number: string | null;
+    medical_aid_details: unknown | null;
     created_at: string;
   },
   patientUuidToAppId: Map<string, string>,
@@ -221,6 +222,8 @@ export function mapInvoice(
     paymentMethod: row.payment_method ?? undefined,
     paymentStatus: row.payment_status,
     receiptNumber: row.receipt_number ?? undefined,
+    medicalAidDetails:
+      (row.medical_aid_details as Invoice["medicalAidDetails"]) ?? undefined,
     createdAt: row.created_at.slice(0, 10),
   };
 }

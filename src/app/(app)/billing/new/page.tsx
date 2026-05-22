@@ -17,12 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MedicalAidDetailsForm } from "@/components/billing/medical-aid-details-form";
+import { emptyMedicalAidDetails, hasMedicalAidDetails } from "@/lib/medical-aid";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import type { PaymentMethod } from "@/types";
+import type { MedicalAidDetails, PaymentMethod } from "@/types";
 
 const DEPT_ORDER: TestDepartment[] = [
   "Haematology",
@@ -41,7 +43,26 @@ export default function NewInvoicePage() {
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [medicalAid, setMedicalAid] = useState<MedicalAidDetails>(() =>
+    emptyMedicalAidDetails(),
+  );
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  const patient = useMemo(
+    () => store.patients.find((p) => p.id === patientId),
+    [store.patients, patientId],
+  );
+
+  useEffect(() => {
+    if (!patient) return;
+    setMedicalAid((ma) => ({
+      ...ma,
+      principalMember: ma.principalSameAsPatient ? patient.fullName : ma.principalMember,
+      society:
+        ma.society ||
+        (patient.medicalAid && patient.medicalAid !== "Self-pay" ? patient.medicalAid : ""),
+    }));
+  }, [patient?.id, patient?.fullName, patient?.medicalAid]);
 
   const selectedIds = useMemo(() => {
     const ids = Object.entries(selected)
@@ -83,6 +104,21 @@ export default function NewInvoicePage() {
       toast.error("Select at least one line item.");
       return;
     }
+    if (paymentMethod === "Medical Aid") {
+      if (!medicalAid.society.trim() || !medicalAid.memberNumber.trim()) {
+        toast.error("Enter medical aid society and member number.");
+        return;
+      }
+    }
+    const aidPayload =
+      paymentMethod === "Medical Aid" || hasMedicalAidDetails(medicalAid)
+        ? {
+            ...medicalAid,
+            principalMember: medicalAid.principalSameAsPatient
+              ? (patient?.fullName ?? medicalAid.principalMember)
+              : medicalAid.principalMember,
+          }
+        : undefined;
     const inv = addInvoice({
       patientId,
       orderId: orderId !== "none" ? orderId : undefined,
@@ -90,6 +126,7 @@ export default function NewInvoicePage() {
       discount: parseFloat(discount || "0") || 0,
       tax: parseFloat(tax || "0") || 0,
       paymentMethod: paymentMethod || undefined,
+      medicalAidDetails: aidPayload,
     });
     toast.success("Invoice generated.");
     router.push(`/billing/${inv.id}`);
@@ -187,6 +224,14 @@ export default function NewInvoicePage() {
           </div>
         </CardContent>
       </Card>
+
+      {paymentMethod === "Medical Aid" ? (
+        <MedicalAidDetailsForm
+          value={medicalAid}
+          onChange={setMedicalAid}
+          patientFullName={patient?.fullName ?? ""}
+        />
+      ) : null}
 
       <Card className="border-border/70 shadow-sm">
         <CardHeader>

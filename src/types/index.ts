@@ -157,6 +157,17 @@ export type PaymentMethod =
 
 export type PaymentStatus = "Paid" | "Partially Paid" | "Unpaid";
 
+/** Captured on invoice when billing to a medical aid scheme. */
+export interface MedicalAidDetails {
+  society: string;
+  plan: string;
+  memberNumber: string;
+  principalMember: string;
+  principalSameAsPatient: boolean;
+  /** Dependent suffix on the membership (e.g. 00 principal, 01 spouse). */
+  suffix: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -170,6 +181,7 @@ export interface Invoice {
   paymentMethod?: PaymentMethod;
   paymentStatus: PaymentStatus;
   receiptNumber?: string;
+  medicalAidDetails?: MedicalAidDetails;
   createdAt: string;
 }
 

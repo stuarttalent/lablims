@@ -77,6 +77,7 @@ type DataContextValue = {
     discount?: number;
     tax?: number;
     paymentMethod?: PaymentMethod;
+    medicalAidDetails?: Invoice["medicalAidDetails"];
   }) => Invoice;
   updateInvoice: (
     id: string,
@@ -86,6 +87,7 @@ type DataContextValue = {
         | "paymentStatus"
         | "paymentMethod"
         | "receiptNumber"
+        | "medicalAidDetails"
         | "discount"
         | "tax"
         | "subtotal"
@@ -325,6 +327,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       discount?: number;
       tax?: number;
       paymentMethod?: PaymentMethod;
+      medicalAidDetails?: Invoice["medicalAidDetails"];
     }) => {
       let inv: Invoice | null = null;
       commit((s) => {
@@ -348,6 +351,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           total,
           paymentMethod: input.paymentMethod,
           paymentStatus: "Unpaid",
+          medicalAidDetails: input.medicalAidDetails,
           createdAt: new Date().toISOString().slice(0, 10),
         };
         return { ...s, invoices: [...s.invoices, inv] };
@@ -372,6 +376,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           | "paymentStatus"
           | "paymentMethod"
           | "receiptNumber"
+          | "medicalAidDetails"
           | "discount"
           | "tax"
           | "subtotal"

@@ -303,6 +303,7 @@ export async function persistInvoiceInsert(
     payment_method: invoice.paymentMethod ?? null,
     payment_status: invoice.paymentStatus,
     receipt_number: invoice.receiptNumber ?? null,
+    medical_aid_details: invoice.medicalAidDetails ?? null,
   });
   if (error) throw error;
 }
@@ -329,6 +330,8 @@ export async function persistInvoiceUpdate(
   if (patch.tax != null) row.tax = patch.tax;
   if (patch.subtotal != null) row.subtotal = patch.subtotal;
   if (patch.total != null) row.total = patch.total;
+  if (patch.medicalAidDetails !== undefined)
+    row.medical_aid_details = patch.medicalAidDetails ?? null;
   const { error } = await supabase.from("invoices").update(row).eq("id", data.id);
   if (error) throw error;
 }
