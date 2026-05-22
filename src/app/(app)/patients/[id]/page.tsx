@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CumulativeTestsPanel } from "@/components/patients/cumulative-tests-panel";
+import { PatientClinicalSection } from "@/components/patients/patient-clinical-section";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -123,7 +124,7 @@ export default function PatientProfilePage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-border/70 shadow-sm">
+        <Card className="border-border/70 shadow-sm lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Demographics</CardTitle>
           </CardHeader>
@@ -191,7 +192,7 @@ export default function PatientProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 shadow-sm">
+        <Card className="border-border/70 shadow-sm lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Quick actions</CardTitle>
           </CardHeader>
@@ -207,6 +208,18 @@ export default function PatientProfilePage() {
             </p>
           </CardContent>
         </Card>
+
+        <PatientClinicalSection
+          symptoms={display.clinicalSymptoms ?? ""}
+          history={display.clinicalHistory ?? ""}
+          editing={editing}
+          onSymptomsChange={(v) =>
+            setDraft((d) => (d ? { ...d, clinicalSymptoms: v || undefined } : d))
+          }
+          onHistoryChange={(v) =>
+            setDraft((d) => (d ? { ...d, clinicalHistory: v || undefined } : d))
+          }
+        />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">

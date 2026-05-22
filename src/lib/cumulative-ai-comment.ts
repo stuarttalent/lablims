@@ -11,6 +11,8 @@ export type ParameterTrend =
 
 export type CumulativeAiInput = {
   patient?: Pick<Patient, "fullName" | "age" | "gender" | "dateOfBirth">;
+  clinicalSymptoms?: string;
+  clinicalHistory?: string;
   testRunLabel: string;
   visits: { orderId: string; date: string }[];
   parameters: {
@@ -66,6 +68,8 @@ export function matrixToCumulativeAiInput(
           dateOfBirth: patient.dateOfBirth,
         }
       : undefined,
+    clinicalSymptoms: patient?.clinicalSymptoms,
+    clinicalHistory: patient?.clinicalHistory,
     testRunLabel: matrix.runLabel,
     visits: matrix.columns.map((c) => ({
       orderId: c.orderId,

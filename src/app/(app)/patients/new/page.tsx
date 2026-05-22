@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PatientClinicalSection } from "@/components/patients/patient-clinical-section";
 import Link from "next/link";
 
 export default function NewPatientPage() {
@@ -33,6 +34,8 @@ export default function NewPatientPage() {
   const [address, setAddress] = useState("");
   const [referringDoctor, setReferringDoctor] = useState("");
   const [medicalAid, setMedicalAid] = useState("Self-pay");
+  const [clinicalSymptoms, setClinicalSymptoms] = useState("");
+  const [clinicalHistory, setClinicalHistory] = useState("");
 
   if (!user || !canCreatePatient(user.role)) {
     return (
@@ -71,6 +74,8 @@ export default function NewPatientPage() {
       address: address.trim(),
       referringDoctor: referringDoctor.trim(),
       medicalAid: medicalAid.trim(),
+      clinicalSymptoms: clinicalSymptoms.trim() || undefined,
+      clinicalHistory: clinicalHistory.trim() || undefined,
     });
     toast.success("Patient saved.");
     router.push(`/patients/${p.id}`);
@@ -139,6 +144,14 @@ export default function NewPatientPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PatientClinicalSection
+        symptoms={clinicalSymptoms}
+        history={clinicalHistory}
+        editing
+        onSymptomsChange={setClinicalSymptoms}
+        onHistoryChange={setClinicalHistory}
+      />
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={submit}>Save patient</Button>

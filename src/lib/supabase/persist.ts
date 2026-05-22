@@ -88,6 +88,8 @@ export async function persistPatientInsert(
       address: patient.address,
       referring_doctor: patient.referringDoctor,
       medical_aid: patient.medicalAid,
+      clinical_symptoms: patient.clinicalSymptoms ?? null,
+      clinical_history: patient.clinicalHistory ?? null,
     })
     .select("id")
     .single();
@@ -113,6 +115,10 @@ export async function persistPatientUpdate(
   if (patch.address != null) row.address = patch.address;
   if (patch.referringDoctor != null) row.referring_doctor = patch.referringDoctor;
   if (patch.medicalAid != null) row.medical_aid = patch.medicalAid;
+  if (patch.clinicalSymptoms !== undefined)
+    row.clinical_symptoms = patch.clinicalSymptoms ?? null;
+  if (patch.clinicalHistory !== undefined)
+    row.clinical_history = patch.clinicalHistory ?? null;
   const { error } = await supabase.from("patients").update(row).eq("id", uuid);
   if (error) throw error;
 }

@@ -224,28 +224,21 @@ export default function ResultsWorkspacePage() {
         </p>
       )}
 
-      <Card className="border-border/70 shadow-sm border-violet-500/20 bg-violet-50/20 dark:bg-violet-950/15">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Clinical context</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Label htmlFor="clinical-sx">Symptoms &amp; clinical indication</Label>
-          <Textarea
-            id="clinical-sx"
-            rows={3}
-            disabled={readOnly}
-            placeholder="e.g. polyuria, weight loss, screening for diabetes…"
-            value={order.clinicalSymptoms ?? ""}
-            onChange={(e) =>
-              updateOrder(order.id, { clinicalSymptoms: e.target.value || undefined })
-            }
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Feeds the optional AI interpretive summary. Turn on “Include on result slip” in the
-            AI section to print it on reports.
-          </p>
-        </CardContent>
-      </Card>
+      {patient ? (
+        <p className="text-sm text-muted-foreground rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
+          Clinical symptoms and history are recorded on the{" "}
+          <Link
+            href={`/patients/${patient.id}`}
+            className="font-medium text-foreground underline underline-offset-2"
+          >
+            patient demographics
+          </Link>{" "}
+          page
+          {patient.clinicalSymptoms || patient.clinicalHistory
+            ? " (chart has clinical information on file)."
+            : " — add clinical information there for AI interpretive comments."}
+        </p>
+      ) : null}
 
       <Card className="border-border/70 shadow-sm border-teal-500/20 bg-teal-50/15 dark:bg-teal-950/15">
         <CardHeader className="pb-2">
@@ -298,7 +291,8 @@ export default function ResultsWorkspacePage() {
             </>
           ) : (
             <p className="text-xs text-muted-foreground italic">
-              No generated narrative yet. Enter results and clinical symptoms, then generate.
+              No generated narrative yet. Enter results and ensure clinical information is on the
+              patient chart, then generate.
             </p>
           )}
         </CardContent>

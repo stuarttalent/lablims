@@ -42,6 +42,7 @@ export const DEMO_PATIENTS: Patient[] = [
   {
     id: "P-1002",
     fullName: "Tariro Moyo",
+    clinicalSymptoms: "Progressive fatigue, occasional gum bleeding.",
     dateOfBirth: "1995-07-22",
     age: 30,
     gender: "Female",
@@ -322,7 +323,6 @@ export const DEMO_ORDERS: LabOrder[] = [
     requestingDoctor: "Dr. Rudo Chikwanha",
     collectionDate: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0)),
     status: "Pending Verification",
-    clinicalSymptoms: "Progressive fatigue, occasional gum bleeding.",
     assignedTechId: "u-tech",
     assignedScientistId: "u-scientist",
     createdAt: isoDt(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 15)),

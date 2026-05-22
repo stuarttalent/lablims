@@ -112,8 +112,9 @@ export function applyEdlizLabRules(input: AiCommentInput): {
 
   const abnormal = input.results.filter(isAbnormal);
   const symptoms = (input.clinicalSymptoms ?? "").toLowerCase();
+  const history = (input.clinicalHistory ?? "").toLowerCase();
   const notes = (input.orderNotes ?? "").toLowerCase();
-  const ctx = `${symptoms} ${notes}`;
+  const ctx = `${symptoms} ${history} ${notes}`;
 
   const feverish =
     /fever|pyrex|night sweat|chills|malaria/i.test(ctx) || abnormal.length > 0;

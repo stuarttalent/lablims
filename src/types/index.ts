@@ -78,6 +78,10 @@ export interface Patient {
   address: string;
   referringDoctor: string;
   medicalAid: string;
+  /** Symptoms, indication for testing, presenting complaints. */
+  clinicalSymptoms?: string;
+  /** Past medical history, allergies, chronic conditions (free text). */
+  clinicalHistory?: string;
   createdAt: string;
 }
 

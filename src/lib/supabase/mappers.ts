@@ -65,6 +65,8 @@ export function mapPatient(row: {
   address: string;
   referring_doctor: string;
   medical_aid: string;
+  clinical_symptoms: string | null;
+  clinical_history: string | null;
   created_at: string;
 }): Patient {
   return {
@@ -78,6 +80,8 @@ export function mapPatient(row: {
     address: row.address,
     referringDoctor: row.referring_doctor,
     medicalAid: row.medical_aid,
+    clinicalSymptoms: row.clinical_symptoms ?? undefined,
+    clinicalHistory: row.clinical_history ?? undefined,
     createdAt: row.created_at.slice(0, 10),
   };
 }

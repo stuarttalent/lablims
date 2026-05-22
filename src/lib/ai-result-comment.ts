@@ -4,6 +4,7 @@ import { getTestById } from "@/data/catalogue";
 export type AiCommentInput = {
   patient?: Pick<Patient, "fullName" | "age" | "gender" | "dateOfBirth">;
   clinicalSymptoms?: string;
+  clinicalHistory?: string;
   orderNotes?: string;
   results: {
     testId: string;
@@ -18,7 +19,7 @@ export type AiCommentInput = {
 
 /** Deterministic narrative when no LLM key is configured (demo / offline). */
 export function buildHeuristicResultComment(input: AiCommentInput): string {
-  const { patient, clinicalSymptoms, orderNotes } = input;
+  const { patient, clinicalSymptoms, clinicalHistory, orderNotes } = input;
   const lines: string[] = [];
 
   lines.push("Laboratory narrative (decision-support only — not a formal diagnosis).");
@@ -29,7 +30,9 @@ export function buildHeuristicResultComment(input: AiCommentInput): string {
     );
   }
 
-  const ctx = [clinicalSymptoms?.trim(), orderNotes?.trim()].filter(Boolean).join(" ");
+  const ctx = [clinicalSymptoms?.trim(), clinicalHistory?.trim(), orderNotes?.trim()]
+    .filter(Boolean)
+    .join(" ");
   if (ctx) {
     lines.push(`Clinical notes on file: ${ctx}`);
   }
@@ -81,7 +84,8 @@ export function orderToAiCommentPayload(
           dateOfBirth: patient.dateOfBirth,
         }
       : undefined,
-    clinicalSymptoms: order.clinicalSymptoms,
+    clinicalSymptoms: patient?.clinicalSymptoms ?? order.clinicalSymptoms,
+    clinicalHistory: patient?.clinicalHistory,
     orderNotes: order.notes,
     results: order.tests.map((t) => {
       const meta = getTestById(t.testId);
