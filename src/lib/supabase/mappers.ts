@@ -120,6 +120,7 @@ export function mapOrderLine(row: {
   verified_by_credential: string | null;
   verification_date: string | null;
   result_status: OrderTestLine["resultStatus"] | null;
+  amendments: unknown;
 }): OrderTestLine {
   return {
     testId: row.test_id,
@@ -134,6 +135,9 @@ export function mapOrderLine(row: {
     verifiedByCredential: row.verified_by_credential ?? undefined,
     verificationDate: row.verification_date ?? undefined,
     resultStatus: row.result_status ?? undefined,
+    amendments: Array.isArray(row.amendments)
+      ? (row.amendments as OrderTestLine["amendments"])
+      : undefined,
   };
 }
 

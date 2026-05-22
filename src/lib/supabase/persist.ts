@@ -184,6 +184,7 @@ function lineRow(
     verified_by_credential: line.verifiedByCredential ?? null,
     verification_date: line.verificationDate ?? null,
     result_status: line.resultStatus ?? null,
+    amendments: line.amendments ?? [],
     sort_order: sortOrder,
   };
 }
@@ -255,6 +256,7 @@ export async function persistOrderLineUpdate(
   if (patch.verificationDate !== undefined)
     row.verification_date = patch.verificationDate ?? null;
   if (patch.resultStatus !== undefined) row.result_status = patch.resultStatus ?? null;
+  if (patch.amendments !== undefined) row.amendments = patch.amendments;
 
   const { data: existing } = await supabase
     .from("order_test_lines")

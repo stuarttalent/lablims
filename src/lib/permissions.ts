@@ -123,3 +123,6 @@ export function canViewPatients(role: UserRole): boolean {
 export function canEditCataloguePricing(role: UserRole): boolean {
   return hasAdminPrivileges(role);
 }
+
+/** @see canAmendAuthorizedResults in @/lib/authorized-results */
+export { canAmendAuthorizedResults, isAuthorizedResultLine } from "@/lib/authorized-results";

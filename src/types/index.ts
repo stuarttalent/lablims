@@ -107,6 +107,14 @@ export type LineResultStatus =
   | "Verified"
   | "Released";
 
+/** Audit entry when an authorized result is changed (scientist or higher). */
+export type ResultAmendment = {
+  at: string;
+  amendedBy: string;
+  amendedByRole: UserRole;
+  reason: string;
+};
+
 export interface OrderTestLine {
   testId: string;
   resultValue?: string;
@@ -123,6 +131,8 @@ export interface OrderTestLine {
   verifiedByCredential?: string;
   verificationDate?: string;
   resultStatus?: LineResultStatus;
+  /** Reasons recorded when authorized results are amended. */
+  amendments?: ResultAmendment[];
 }
 
 export interface LabOrder {

@@ -3,7 +3,17 @@
 import { getTestById } from "@/data/catalogue";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
-import { canEnterResults, canVerifyResults } from "@/lib/permissions";
+import {
+  canAmendAuthorizedResults,
+  canEnterResults,
+  canVerifyResults,
+} from "@/lib/permissions";
+import {
+  authorizedEditPolicyMessage,
+  isAuthorizedResultLine,
+} from "@/lib/authorized-results";
+import { AuthorizedResultAmendDialog } from "@/components/results/authorized-result-amend-dialog";
+import { ResultAmendmentHistory } from "@/components/results/result-amendment-history";
 import {
   defaultCommentsForLine,
   resolveReferenceRangeForPatient,
@@ -13,7 +23,7 @@ import type { ClinicalGuidance } from "@/lib/ai/clinical-guidance-types";
 import { ClinicalGuidancePanel } from "@/components/results/clinical-guidance-panel";
 import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
 import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
-import type { LineResultStatus, OrderStatus, ResultFlag } from "@/types";
+import type { LineResultStatus, OrderStatus, OrderTestLine, ResultFlag } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,12 +75,71 @@ export default function ResultsWorkspacePage() {
   const [deltaAiBusyId, setDeltaAiBusyId] = useState<string | null>(null);
   const [preAuthAiByTestId, setPreAuthAiByTestId] = useState<Record<string, string>>({});
   const [preAuthBusyId, setPreAuthBusyId] = useState<string | null>(null);
+  const [amendDialog, setAmendDialog] = useState<{
+    testId: string;
+    testName: string;
+    patch: Partial<OrderTestLine>;
+  } | null>(null);
   const order = store.orders.find((o) => o.id === params.orderId);
 
   if (!order) notFound();
 
   const patient = store.patients.find((p) => p.id === order.patientId);
   const readOnly = user?.role === "doctor";
+
+  function requestLineUpdate(
+    line: OrderTestLine,
+    testName: string,
+    patch: Partial<OrderTestLine>,
+  ) {
+    if (!user || !order) return;
+    if (!isAuthorizedResultLine(line)) {
+      updateOrderLine(order.id, line.testId, patch);
+      return;
+    }
+    if (!canAmendAuthorizedResults(user.role)) {
+      toast.error(
+        "This result is authorized. Only a laboratory scientist or higher rank can amend it, with a documented reason.",
+      );
+      return;
+    }
+    setAmendDialog({ testId: line.testId, testName, patch });
+  }
+
+  function confirmAmendment(reason: string) {
+    if (!amendDialog || !user || !order) return;
+    updateOrderLine(order.id, amendDialog.testId, amendDialog.patch, {
+      amendment: { reason, amendedBy: user },
+    });
+    setAmendDialog(null);
+    toast.success("Amendment recorded.");
+  }
+
+  function lineFieldsDisabled(line: OrderTestLine): boolean {
+    if (readOnly || !user || !canEnterResults(user.role)) return true;
+    if (isAuthorizedResultLine(line) && !canAmendAuthorizedResults(user.role)) {
+      return true;
+    }
+    return false;
+  }
+
+  function applyLineFieldChange(
+    line: OrderTestLine,
+    testName: string,
+    patch: Partial<OrderTestLine>,
+    opts?: { onBlur?: boolean },
+  ) {
+    if (!user || !order) return;
+    const authorized = isAuthorizedResultLine(line);
+    if (authorized) {
+      if (!canAmendAuthorizedResults(user.role)) return;
+      if (!opts?.onBlur) return;
+      requestLineUpdate(line, testName, patch);
+      return;
+    }
+    if (opts?.onBlur) return;
+    updateOrderLine(order.id, line.testId, patch);
+  }
 
   async function generateAiComment() {
     if (!order) return;
@@ -301,6 +370,11 @@ export default function ResultsWorkspacePage() {
       <Card className="border-border/70 shadow-sm">
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2">
           <CardTitle className="text-base">Analytes</CardTitle>
+          {user ? (
+            <p className="text-xs text-muted-foreground sm:col-span-2 w-full">
+              {authorizedEditPolicyMessage(user.role)}
+            </p>
+          ) : null}
           {!readOnly && user && canEnterResults(user.role) && (
             <Button type="button" size="sm" variant="secondary" onClick={applyCatalogueCommentsToAll}>
               Apply catalogue comment rules
@@ -342,9 +416,18 @@ export default function ResultsWorkspacePage() {
                       {meta?.department} · {meta?.sampleType}
                     </p>
                   </div>
-                  <Badge variant="secondary">
-                    {lineStatusLabel(line.resultStatus)}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant="secondary">
+                      {lineStatusLabel(line.resultStatus)}
+                    </Badge>
+                    {isAuthorizedResultLine(line) ? (
+                      <span className="text-[10px] text-violet-700 dark:text-violet-300 max-w-[12rem] text-right">
+                        {canAmendAuthorizedResults(user?.role ?? "tech")
+                          ? "Amendment requires reason"
+                          : "Locked — scientist+ only"}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div
@@ -359,36 +442,62 @@ export default function ResultsWorkspacePage() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Result</Label>
                     <Input
-                      disabled={readOnly || !user || !canEnterResults(user.role)}
+                      disabled={lineFieldsDisabled(line)}
                       value={line.resultValue ?? ""}
                       onChange={(e) =>
-                        updateOrderLine(order.id, line.testId, {
-                          resultValue: e.target.value,
-                        })
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { resultValue: e.target.value },
+                        )
+                      }
+                      onBlur={(e) =>
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { resultValue: e.target.value },
+                          { onBlur: true },
+                        )
                       }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Units</Label>
                     <Input
-                      disabled={readOnly || !user || !canEnterResults(user.role)}
+                      disabled={lineFieldsDisabled(line)}
                       value={line.units ?? meta?.units ?? ""}
                       onChange={(e) =>
-                        updateOrderLine(order.id, line.testId, {
+                        applyLineFieldChange(line, meta?.name ?? line.testId, {
                           units: e.target.value,
                         })
+                      }
+                      onBlur={(e) =>
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { units: e.target.value },
+                          { onBlur: true },
+                        )
                       }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Reference range</Label>
                     <Input
-                      disabled={readOnly || !user || !canEnterResults(user.role)}
+                      disabled={lineFieldsDisabled(line)}
                       value={line.referenceRange ?? meta?.referenceRange ?? ""}
                       onChange={(e) =>
-                        updateOrderLine(order.id, line.testId, {
+                        applyLineFieldChange(line, meta?.name ?? line.testId, {
                           referenceRange: e.target.value,
                         })
+                      }
+                      onBlur={(e) =>
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { referenceRange: e.target.value },
+                          { onBlur: true },
+                        )
                       }
                     />
                     {patient && suggestedRef ? (
@@ -397,15 +506,15 @@ export default function ResultsWorkspacePage() {
                           Suggested for {patient.fullName} ({patient.gender}, {patient.age}y):{" "}
                           <span className="text-foreground">{suggestedRef}</span>
                         </span>
-                        {!readOnly && user && canEnterResults(user.role) ? (
+                        {!lineFieldsDisabled(line) ? (
                           <Button
                             type="button"
                             variant="link"
                             className="h-auto p-0 text-xs"
                             onClick={() =>
-                              updateOrderLine(order.id, line.testId, {
+                              applyLineFieldChange(line, meta?.name ?? line.testId, {
                                 referenceRange: suggestedRef,
-                              })
+                              }, { onBlur: true })
                             }
                           >
                             Apply
@@ -417,12 +526,15 @@ export default function ResultsWorkspacePage() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Flag</Label>
                     <Select
-                      disabled={readOnly || !user || !canEnterResults(user.role)}
+                      disabled={lineFieldsDisabled(line)}
                       value={line.flag ?? "Normal"}
                       onValueChange={(v) =>
-                        updateOrderLine(order.id, line.testId, {
-                          flag: v as ResultFlag,
-                        })
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { flag: v as ResultFlag },
+                          isAuthorizedResultLine(line) ? { onBlur: true } : undefined,
+                        )
                       }
                     >
                       <SelectTrigger>
@@ -440,16 +552,24 @@ export default function ResultsWorkspacePage() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Comment</Label>
                     <Textarea
-                      disabled={readOnly || !user || !canEnterResults(user.role)}
+                      disabled={lineFieldsDisabled(line)}
                       rows={2}
                       value={line.comment ?? ""}
                       onChange={(e) =>
-                        updateOrderLine(order.id, line.testId, {
+                        applyLineFieldChange(line, meta?.name ?? line.testId, {
                           comment: e.target.value,
                         })
                       }
+                      onBlur={(e) =>
+                        applyLineFieldChange(
+                          line,
+                          meta?.name ?? line.testId,
+                          { comment: e.target.value },
+                          { onBlur: true },
+                        )
+                      }
                     />
-                    {!readOnly && user && canEnterResults(user.role) ? (
+                    {!lineFieldsDisabled(line) ? (
                       <Button
                         type="button"
                         variant="ghost"
@@ -473,7 +593,12 @@ export default function ResultsWorkspacePage() {
                               : block.split("\n").every((p) => cur.includes(p))
                                 ? cur
                                 : `${cur}\n${block}`;
-                          updateOrderLine(order.id, line.testId, { comment: merged });
+                          applyLineFieldChange(
+                            line,
+                            meta?.name ?? line.testId,
+                            { comment: merged },
+                            { onBlur: true },
+                          );
                           toast.message("Catalogue comments merged.");
                         }}
                       >
@@ -481,6 +606,7 @@ export default function ResultsWorkspacePage() {
                       </Button>
                     ) : null}
                   </div>
+                  <ResultAmendmentHistory amendments={line.amendments} />
                   {prior ? (
                     <div className="sm:col-span-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-3 space-y-2">
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
@@ -605,7 +731,8 @@ export default function ResultsWorkspacePage() {
                     ) : null}
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {canEnterResults(user.role) && (
+                      {canEnterResults(user.role) &&
+                        !isAuthorizedResultLine(line) && (
                         <>
                           <Button
                             size="sm"
@@ -697,6 +824,15 @@ export default function ResultsWorkspacePage() {
           })}
         </CardContent>
       </Card>
+
+      <AuthorizedResultAmendDialog
+        open={amendDialog !== null}
+        testName={amendDialog?.testName ?? ""}
+        onOpenChange={(open) => {
+          if (!open) setAmendDialog(null);
+        }}
+        onConfirm={confirmAmendment}
+      />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import type {
   Invoice,
   LabOrder,
   LabSettings,
+  MockUser,
   OrderTestLine,
   Patient,
   PaymentMethod,
@@ -69,6 +70,9 @@ type DataContextValue = {
     orderId: string,
     testId: string,
     patch: Partial<OrderTestLine>,
+    options?: {
+      amendment?: { reason: string; amendedBy: MockUser };
+    },
   ) => void;
   addInvoice: (input: {
     patientId: string;
@@ -296,22 +300,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateOrderLine = useCallback(
-    (orderId: string, testId: string, patch: Partial<OrderTestLine>) => {
+    (
+      orderId: string,
+      testId: string,
+      patch: Partial<OrderTestLine>,
+      options?: { amendment?: { reason: string; amendedBy: MockUser } },
+    ) => {
+      let persistPatch: Partial<OrderTestLine> = patch;
       commit((s) => ({
         ...s,
         orders: s.orders.map((o) => {
           if (o.id !== orderId) return o;
           return {
             ...o,
-            tests: o.tests.map((t) =>
-              t.testId === testId ? { ...t, ...patch } : t,
-            ),
+            tests: o.tests.map((t) => {
+              if (t.testId !== testId) return t;
+              let next: OrderTestLine = { ...t, ...patch };
+              if (options?.amendment) {
+                const entry = {
+                  at: new Date().toISOString().slice(0, 16).replace("T", " "),
+                  amendedBy: options.amendment.amendedBy.name,
+                  amendedByRole: options.amendment.amendedBy.role,
+                  reason: options.amendment.reason,
+                };
+                next = {
+                  ...next,
+                  amendments: [...(t.amendments ?? []), entry],
+                };
+              }
+              persistPatch = options?.amendment
+                ? { ...patch, amendments: next.amendments }
+                : patch;
+              return next;
+            }),
           };
         }),
       }));
       const ctx = supabaseCtxRef.current;
       if (ctx) {
-        void persistOrderLineUpdate(ctx, orderId, testId, patch).catch((e) =>
+        void persistOrderLineUpdate(ctx, orderId, testId, persistPatch).catch((e) =>
           syncError("update result", e),
         );
       }
