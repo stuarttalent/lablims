@@ -22,7 +22,8 @@ function parseNum(value?: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function isAbnormal(r: ResultRow): boolean {
+function isAbnormal(r: ResultRow | undefined): boolean {
+  if (!r) return false;
   return Boolean(r.flag && r.flag !== "Normal");
 }
 
@@ -160,8 +161,8 @@ export function applyEdlizLabRules(input: AiCommentInput): {
   const glucose = getResult(input, "t-glucose");
   const hba1c = getResult(input, "t-hba1c");
   if (
-    isAbnormal(glucose ?? {}) ||
-    isAbnormal(hba1c ?? {}) ||
+    isAbnormal(glucose) ||
+    isAbnormal(hba1c) ||
     /diabet|polyuria|polydips|glycos|weight loss/i.test(ctx)
   ) {
     sections.push("Diabetes mellitus");
@@ -189,7 +190,7 @@ export function applyEdlizLabRules(input: AiCommentInput): {
         rationale: `Glucose ${glucose?.resultValue} ${glucose?.units ?? "mmol/L"} — EDLIZ targets glycaemia ~5–7 mmol/L when available; therapy and follow-up per diabetes chapter.`,
         edlizSection: "Diabetes mellitus",
       });
-    } else if (isAbnormal(hba1c ?? {}) || isAbnormal(glucose ?? {})) {
+    } else if (isAbnormal(hba1c) || isAbnormal(glucose)) {
       pushUniqueImpression(impressions, {
         label: "Dysglycaemia — diabetes monitoring indicated",
         certainty: "consider",
@@ -231,7 +232,7 @@ export function applyEdlizLabRules(input: AiCommentInput): {
 
   const creat = getResult(input, "t-ue-creat");
   const urea = getResult(input, "t-ue-urea");
-  if (isAbnormal(creat ?? {}) || isAbnormal(urea ?? {})) {
+  if (isAbnormal(creat) || isAbnormal(urea)) {
     sections.push("Renal tract conditions");
     pushUniqueImpression(impressions, {
       label: "Renal function abnormality",
@@ -251,7 +252,7 @@ export function applyEdlizLabRules(input: AiCommentInput): {
   }
 
   const hb = getResult(input, "t-fbc-hb");
-  if (isAbnormal(hb ?? {})) {
+  if (isAbnormal(hb)) {
     const hbVal = parseNum(hb?.resultValue);
     if (hbVal != null && hbVal < 7) {
       sections.push("Malaria");
@@ -287,7 +288,7 @@ export function applyEdlizLabRules(input: AiCommentInput): {
   }
 
   const crp = getResult(input, "t-crp");
-  if (isAbnormal(crp ?? {}) || /infect|sepsis|pneumonia/i.test(ctx)) {
+  if (isAbnormal(crp) || /infect|sepsis|pneumonia/i.test(ctx)) {
     pushUniqueImpression(impressions, {
       label: "Inflammatory / infectious process",
       certainty: "consider",
