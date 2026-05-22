@@ -146,6 +146,7 @@ export function mapOrder(
     notes: string | null;
     clinical_symptoms: string | null;
     ai_generated_comment: string | null;
+    ai_clinical_guidance: unknown | null;
     include_ai_comment_in_report: boolean;
     assigned_tech_id: string | null;
     assigned_scientist_id: string | null;
@@ -168,6 +169,8 @@ export function mapOrder(
     notes: row.notes ?? undefined,
     clinicalSymptoms: row.clinical_symptoms ?? undefined,
     aiGeneratedComment: row.ai_generated_comment ?? undefined,
+    aiClinicalGuidance:
+      (row.ai_clinical_guidance as LabOrder["aiClinicalGuidance"]) ?? undefined,
     includeAiCommentInReport: row.include_ai_comment_in_report,
     assignedTechId: mapProfileRef(row.assigned_tech_id, profileMaps),
     assignedScientistId: mapProfileRef(row.assigned_scientist_id, profileMaps),

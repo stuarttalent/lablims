@@ -139,6 +139,7 @@ export async function persistOrderInsert(
       notes: order.notes ?? null,
       clinical_symptoms: order.clinicalSymptoms ?? null,
       ai_generated_comment: order.aiGeneratedComment ?? null,
+      ai_clinical_guidance: order.aiClinicalGuidance ?? null,
       include_ai_comment_in_report: order.includeAiCommentInReport ?? false,
       assigned_tech_id: resolveProfileUuid(ctx, order.assignedTechId),
       assigned_scientist_id: resolveProfileUuid(ctx, order.assignedScientistId),
@@ -200,6 +201,8 @@ export async function persistOrderUpdate(
     row.clinical_symptoms = patch.clinicalSymptoms ?? null;
   if (patch.aiGeneratedComment !== undefined)
     row.ai_generated_comment = patch.aiGeneratedComment ?? null;
+  if (patch.aiClinicalGuidance !== undefined)
+    row.ai_clinical_guidance = patch.aiClinicalGuidance ?? null;
   if (patch.includeAiCommentInReport != null)
     row.include_ai_comment_in_report = patch.includeAiCommentInReport;
   if (patch.assignedTechId !== undefined)

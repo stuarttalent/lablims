@@ -2,6 +2,7 @@ import {
   buildHeuristicCumulativeComment,
   type CumulativeAiInput,
 } from "@/lib/cumulative-ai-comment";
+import { EDLIZ_LAB_CONTEXT, EDLIZ_PDF_URL } from "@/lib/ai/edliz-knowledge";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -21,22 +22,27 @@ async function openAiCumulativeComment(
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
       temperature: 0.2,
-      max_tokens: 450,
+      max_tokens: 650,
       messages: [
         {
           role: "system",
-          content: `You are a clinical laboratory specialist writing a cumulative (longitudinal) interpretive comment.
+          content: `You are a clinical laboratory specialist in Zimbabwe writing a cumulative (longitudinal) interpretive comment.
+
+${EDLIZ_LAB_CONTEXT}
+
+Reference: ${EDLIZ_PDF_URL}
+
 Rules:
 - Use only the JSON provided: same test run repeated on multiple dates for one patient.
-- For each parameter, state whether there is progression (worsening), regression (improvement), or no meaningful change across dates.
-- Use the pre-computed "trend" field as guidance but verify against the numeric sequence.
-- Mention abnormal flags on the latest visit when relevant.
-- 2–4 short paragraphs, plain text, no markdown fences.
+- For each parameter, state progression (worsening), regression (improvement), or no meaningful change.
+- Suggest further tests aligned with EDLIZ when trends imply metabolic, infectious, or cardiovascular follow-up.
+- Mention clinical considerations (consider/likely/consistent_with) — not definitive diagnosis.
+- 2–4 short paragraphs plain text, then a bullet list "Suggested further investigations:" if applicable.
 - End with a brief disclaimer that clinical correlation is required.`,
         },
         {
           role: "user",
-          content: `Write a cumulative trend comment from this JSON:\n${JSON.stringify(input, null, 2)}`,
+          content: `Write a cumulative EDLIZ-informed trend comment from this JSON:\n${JSON.stringify(input, null, 2)}`,
         },
       ],
     }),

@@ -9,6 +9,8 @@ import {
   resolveReferenceRangeForPatient,
 } from "@/lib/catalogue-rules";
 import { orderToAiCommentPayload } from "@/lib/ai-result-comment";
+import type { ClinicalGuidance } from "@/lib/ai/clinical-guidance-types";
+import { ClinicalGuidancePanel } from "@/components/results/clinical-guidance-panel";
 import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
 import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
 import type { LineResultStatus, OrderStatus, ResultFlag } from "@/types";
@@ -80,16 +82,24 @@ export default function ResultsWorkspacePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as { comment?: string; source?: string; error?: string };
+      const data = (await res.json()) as {
+        comment?: string;
+        guidance?: ClinicalGuidance;
+        source?: string;
+        error?: string;
+      };
       if (!res.ok || !data.comment) {
         toast.error(data.error ?? "Could not generate comment.");
         return;
       }
-      updateOrder(order.id, { aiGeneratedComment: data.comment });
+      updateOrder(order.id, {
+        aiGeneratedComment: data.comment,
+        aiClinicalGuidance: data.guidance,
+      });
       toast.success(
         data.source === "openai"
-          ? "AI narrative generated."
-          : "Narrative generated (offline template — set OPENAI_API_KEY for full AI).",
+          ? "EDLIZ-informed AI guidance generated."
+          : "Guidance generated (EDLIZ rules offline — set OPENAI_API_KEY for full AI).",
       );
     } catch {
       toast.error("Generation failed.");
@@ -246,8 +256,9 @@ export default function ResultsWorkspacePage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Generated from patient demographics, clinical symptoms, order notes, and entered
-            results. You choose whether it appears on the printed / PDF slip.
+            Uses patient data, results, and Zimbabwe EDLIZ (2015) guidelines to suggest further
+            tests and clinical considerations — not a formal diagnosis. Choose whether the
+            narrative appears on the printed / PDF slip.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -272,14 +283,19 @@ export default function ResultsWorkspacePage() {
             ) : null}
           </div>
           {order.aiGeneratedComment ? (
-            <Textarea
-              className="text-sm font-normal min-h-[100px]"
-              readOnly={readOnly}
-              value={order.aiGeneratedComment}
-              onChange={(e) =>
-                updateOrder(order.id, { aiGeneratedComment: e.target.value || undefined })
-              }
-            />
+            <>
+              <Textarea
+                className="text-sm font-normal min-h-[100px]"
+                readOnly={readOnly}
+                value={order.aiGeneratedComment}
+                onChange={(e) =>
+                  updateOrder(order.id, { aiGeneratedComment: e.target.value || undefined })
+                }
+              />
+              {order.aiClinicalGuidance ? (
+                <ClinicalGuidancePanel guidance={order.aiClinicalGuidance} />
+              ) : null}
+            </>
           ) : (
             <p className="text-xs text-muted-foreground italic">
               No generated narrative yet. Enter results and clinical symptoms, then generate.

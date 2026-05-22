@@ -1,3 +1,5 @@
+import type { ClinicalGuidance } from "@/lib/ai/clinical-guidance-types";
+
 export type UserRole =
   | "super_admin"
   | "admin"
@@ -132,6 +134,8 @@ export interface LabOrder {
   clinicalSymptoms?: string;
   /** Last model-generated narrative (user chooses whether it appears on slip). */
   aiGeneratedComment?: string;
+  /** Structured EDLIZ-informed guidance (tests, considerations, references). */
+  aiClinicalGuidance?: ClinicalGuidance;
   /** When true, slip and PDF include `aiGeneratedComment` in the report. */
   includeAiCommentInReport?: boolean;
   assignedTechId?: string;
