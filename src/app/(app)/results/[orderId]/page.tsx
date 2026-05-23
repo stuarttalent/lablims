@@ -48,6 +48,42 @@ import { Sparkles } from "lucide-react";
 
 const FLAGS: ResultFlag[] = ["Normal", "Low", "High", "Critical"];
 
+type LineDraftFields = Pick<
+  OrderTestLine,
+  "resultValue" | "units" | "referenceRange" | "flag" | "comment"
+>;
+
+function lineToDraft(
+  line: OrderTestLine,
+  meta?: { units?: string; referenceRange?: string },
+): LineDraftFields {
+  return {
+    resultValue: line.resultValue ?? "",
+    units: line.units ?? meta?.units ?? "",
+    referenceRange: line.referenceRange ?? meta?.referenceRange ?? "",
+    flag: line.flag ?? "Normal",
+    comment: line.comment ?? "",
+  };
+}
+
+function buildLinePatch(
+  line: OrderTestLine,
+  draft: LineDraftFields,
+): Partial<OrderTestLine> | null {
+  const patch: Partial<OrderTestLine> = {};
+  const norm = (v: string | undefined) => v ?? "";
+  if (norm(line.resultValue) !== norm(draft.resultValue)) {
+    patch.resultValue = draft.resultValue;
+  }
+  if (norm(line.units) !== norm(draft.units)) patch.units = draft.units;
+  if (norm(line.referenceRange) !== norm(draft.referenceRange)) {
+    patch.referenceRange = draft.referenceRange;
+  }
+  if ((line.flag ?? "Normal") !== draft.flag) patch.flag = draft.flag;
+  if (norm(line.comment) !== norm(draft.comment)) patch.comment = draft.comment;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
 function lineStatusLabel(s: LineResultStatus | undefined): string {
   if (s === "Pending Verification") return "Pending authorization";
   return s ?? "Draft";
@@ -75,6 +111,12 @@ export default function ResultsWorkspacePage() {
   const [deltaAiBusyId, setDeltaAiBusyId] = useState<string | null>(null);
   const [preAuthAiByTestId, setPreAuthAiByTestId] = useState<Record<string, string>>({});
   const [preAuthBusyId, setPreAuthBusyId] = useState<string | null>(null);
+  const [editingAuthorizedTestId, setEditingAuthorizedTestId] = useState<
+    string | null
+  >(null);
+  const [lineDrafts, setLineDrafts] = useState<Record<string, LineDraftFields>>(
+    {},
+  );
   const [amendDialog, setAmendDialog] = useState<{
     testId: string;
     testName: string;
@@ -87,58 +129,92 @@ export default function ResultsWorkspacePage() {
   const patient = store.patients.find((p) => p.id === order.patientId);
   const readOnly = user?.role === "doctor";
 
-  function requestLineUpdate(
-    line: OrderTestLine,
-    testName: string,
-    patch: Partial<OrderTestLine>,
-  ) {
-    if (!user || !order) return;
-    if (!isAuthorizedResultLine(line)) {
-      updateOrderLine(order.id, line.testId, patch);
-      return;
-    }
-    if (!canAmendAuthorizedResults(user.role)) {
-      toast.error(
-        "This result is authorized. Only a laboratory scientist or higher rank can amend it, with a documented reason.",
-      );
-      return;
-    }
-    setAmendDialog({ testId: line.testId, testName, patch });
-  }
-
   function confirmAmendment(reason: string) {
     if (!amendDialog || !user || !order) return;
     updateOrderLine(order.id, amendDialog.testId, amendDialog.patch, {
       amendment: { reason, amendedBy: user },
     });
     setAmendDialog(null);
+    setEditingAuthorizedTestId(null);
+    setLineDrafts((prev) => {
+      const next = { ...prev };
+      delete next[amendDialog.testId];
+      return next;
+    });
     toast.success("Amendment recorded.");
   }
 
   function lineFieldsDisabled(line: OrderTestLine): boolean {
     if (readOnly || !user || !canEnterResults(user.role)) return true;
-    if (isAuthorizedResultLine(line) && !canAmendAuthorizedResults(user.role)) {
-      return true;
+    if (isAuthorizedResultLine(line)) {
+      if (!canAmendAuthorizedResults(user.role)) return true;
+      return editingAuthorizedTestId !== line.testId;
     }
     return false;
   }
 
-  function applyLineFieldChange(
+  function getDisplayLine(
     line: OrderTestLine,
-    testName: string,
-    patch: Partial<OrderTestLine>,
-    opts?: { onBlur?: boolean },
+    meta?: { units?: string; referenceRange?: string },
+  ): OrderTestLine {
+    const draft = lineDrafts[line.testId];
+    if (editingAuthorizedTestId === line.testId && draft) {
+      return { ...line, ...draft };
+    }
+    return line;
+  }
+
+  function handleLineFieldChange(
+    line: OrderTestLine,
+    meta: { units?: string; referenceRange?: string } | undefined,
+    patch: Partial<LineDraftFields>,
   ) {
-    if (!user || !order) return;
-    const authorized = isAuthorizedResultLine(line);
-    if (authorized) {
-      if (!canAmendAuthorizedResults(user.role)) return;
-      if (!opts?.onBlur) return;
-      requestLineUpdate(line, testName, patch);
+    if (!order) return;
+    if (isAuthorizedResultLine(line)) {
+      if (editingAuthorizedTestId !== line.testId) return;
+      setLineDrafts((prev) => ({
+        ...prev,
+        [line.testId]: {
+          ...(prev[line.testId] ?? lineToDraft(line, meta)),
+          ...patch,
+        },
+      }));
       return;
     }
-    if (opts?.onBlur) return;
     updateOrderLine(order.id, line.testId, patch);
+  }
+
+  function startAuthorizedEdit(
+    line: OrderTestLine,
+    meta?: { units?: string; referenceRange?: string },
+  ) {
+    setEditingAuthorizedTestId(line.testId);
+    setLineDrafts((prev) => ({
+      ...prev,
+      [line.testId]: lineToDraft(line, meta),
+    }));
+  }
+
+  function cancelAuthorizedEdit(testId: string) {
+    setEditingAuthorizedTestId((id) => (id === testId ? null : id));
+    setLineDrafts((prev) => {
+      const next = { ...prev };
+      delete next[testId];
+      return next;
+    });
+  }
+
+  function saveAuthorizedEdit(line: OrderTestLine, testName: string) {
+    if (!user || !order) return;
+    const draft = lineDrafts[line.testId];
+    if (!draft) return;
+    const patch = buildLinePatch(line, draft);
+    if (!patch) {
+      toast.info("No changes to save.");
+      cancelAuthorizedEdit(line.testId);
+      return;
+    }
+    setAmendDialog({ testId: line.testId, testName, patch });
   }
 
   async function generateAiComment() {
@@ -406,6 +482,9 @@ export default function ResultsWorkspacePage() {
                 ? computePreAuthIssues(order, line)
                 : [];
             const rulesBrief = heuristicPreAuthSummary(issues);
+            const displayLine = getDisplayLine(line, meta);
+            const isEditingAuthorized = editingAuthorizedTestId === line.testId;
+            const testLabel = meta?.name ?? line.testId;
             return (
               <div key={line.testId}>
                 {idx > 0 ? <Separator className="mb-6" /> : null}
@@ -421,11 +500,46 @@ export default function ResultsWorkspacePage() {
                       {lineStatusLabel(line.resultStatus)}
                     </Badge>
                     {isAuthorizedResultLine(line) ? (
-                      <span className="text-[10px] text-violet-700 dark:text-violet-300 max-w-[12rem] text-right">
-                        {canAmendAuthorizedResults(user?.role ?? "tech")
-                          ? "Amendment requires reason"
-                          : "Locked — scientist+ only"}
-                      </span>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="text-[10px] text-violet-700 dark:text-violet-300 max-w-[12rem] text-right">
+                          {canAmendAuthorizedResults(user?.role ?? "tech")
+                            ? isEditingAuthorized
+                              ? "Editing — save to record amendment"
+                              : "Amendment requires reason on save"
+                            : "Locked — scientist+ only"}
+                        </span>
+                        {canAmendAuthorizedResults(user?.role ?? "tech") &&
+                        !readOnly ? (
+                          isEditingAuthorized ? (
+                            <div className="flex gap-1.5">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cancelAuthorizedEdit(line.testId)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => saveAuthorizedEdit(line, testLabel)}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => startAuthorizedEdit(line, meta)}
+                            >
+                              Edit
+                            </Button>
+                          )
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </div>
@@ -443,21 +557,11 @@ export default function ResultsWorkspacePage() {
                     <Label>Result</Label>
                     <Input
                       disabled={lineFieldsDisabled(line)}
-                      value={line.resultValue ?? ""}
+                      value={displayLine.resultValue ?? ""}
                       onChange={(e) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { resultValue: e.target.value },
-                        )
-                      }
-                      onBlur={(e) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { resultValue: e.target.value },
-                          { onBlur: true },
-                        )
+                        handleLineFieldChange(line, meta, {
+                          resultValue: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -465,19 +569,11 @@ export default function ResultsWorkspacePage() {
                     <Label>Units</Label>
                     <Input
                       disabled={lineFieldsDisabled(line)}
-                      value={line.units ?? meta?.units ?? ""}
+                      value={displayLine.units ?? meta?.units ?? ""}
                       onChange={(e) =>
-                        applyLineFieldChange(line, meta?.name ?? line.testId, {
+                        handleLineFieldChange(line, meta, {
                           units: e.target.value,
                         })
-                      }
-                      onBlur={(e) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { units: e.target.value },
-                          { onBlur: true },
-                        )
                       }
                     />
                   </div>
@@ -485,19 +581,13 @@ export default function ResultsWorkspacePage() {
                     <Label>Reference range</Label>
                     <Input
                       disabled={lineFieldsDisabled(line)}
-                      value={line.referenceRange ?? meta?.referenceRange ?? ""}
+                      value={
+                        displayLine.referenceRange ?? meta?.referenceRange ?? ""
+                      }
                       onChange={(e) =>
-                        applyLineFieldChange(line, meta?.name ?? line.testId, {
+                        handleLineFieldChange(line, meta, {
                           referenceRange: e.target.value,
                         })
-                      }
-                      onBlur={(e) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { referenceRange: e.target.value },
-                          { onBlur: true },
-                        )
                       }
                     />
                     {patient && suggestedRef ? (
@@ -512,9 +602,9 @@ export default function ResultsWorkspacePage() {
                             variant="link"
                             className="h-auto p-0 text-xs"
                             onClick={() =>
-                              applyLineFieldChange(line, meta?.name ?? line.testId, {
+                              handleLineFieldChange(line, meta, {
                                 referenceRange: suggestedRef,
-                              }, { onBlur: true })
+                              })
                             }
                           >
                             Apply
@@ -527,14 +617,11 @@ export default function ResultsWorkspacePage() {
                     <Label>Flag</Label>
                     <Select
                       disabled={lineFieldsDisabled(line)}
-                      value={line.flag ?? "Normal"}
+                      value={displayLine.flag ?? "Normal"}
                       onValueChange={(v) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { flag: v as ResultFlag },
-                          isAuthorizedResultLine(line) ? { onBlur: true } : undefined,
-                        )
+                        handleLineFieldChange(line, meta, {
+                          flag: v as ResultFlag,
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -554,19 +641,11 @@ export default function ResultsWorkspacePage() {
                     <Textarea
                       disabled={lineFieldsDisabled(line)}
                       rows={2}
-                      value={line.comment ?? ""}
+                      value={displayLine.comment ?? ""}
                       onChange={(e) =>
-                        applyLineFieldChange(line, meta?.name ?? line.testId, {
+                        handleLineFieldChange(line, meta, {
                           comment: e.target.value,
                         })
-                      }
-                      onBlur={(e) =>
-                        applyLineFieldChange(
-                          line,
-                          meta?.name ?? line.testId,
-                          { comment: e.target.value },
-                          { onBlur: true },
-                        )
                       }
                     />
                     {!lineFieldsDisabled(line) ? (
@@ -586,19 +665,14 @@ export default function ResultsWorkspacePage() {
                             return;
                           }
                           const block = additions.join("\n");
-                          const cur = line.comment?.trim() ?? "";
+                          const cur = displayLine.comment?.trim() ?? "";
                           const merged =
                             !cur
                               ? block
                               : block.split("\n").every((p) => cur.includes(p))
                                 ? cur
                                 : `${cur}\n${block}`;
-                          applyLineFieldChange(
-                            line,
-                            meta?.name ?? line.testId,
-                            { comment: merged },
-                            { onBlur: true },
-                          );
+                          handleLineFieldChange(line, meta, { comment: merged });
                           toast.message("Catalogue comments merged.");
                         }}
                       >
@@ -825,14 +899,17 @@ export default function ResultsWorkspacePage() {
         </CardContent>
       </Card>
 
-      <AuthorizedResultAmendDialog
-        open={amendDialog !== null}
-        testName={amendDialog?.testName ?? ""}
-        onOpenChange={(open) => {
-          if (!open) setAmendDialog(null);
-        }}
-        onConfirm={confirmAmendment}
-      />
+      {amendDialog ? (
+        <AuthorizedResultAmendDialog
+          key={amendDialog.testId}
+          open
+          testName={amendDialog.testName}
+          onOpenChange={(open) => {
+            if (!open) setAmendDialog(null);
+          }}
+          onConfirm={confirmAmendment}
+        />
+      ) : null}
     </div>
   );
 }

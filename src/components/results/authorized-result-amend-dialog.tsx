@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function AuthorizedResultAmendDialog({
   open,
@@ -26,21 +26,18 @@ export function AuthorizedResultAmendDialog({
 }) {
   const [reason, setReason] = useState("");
 
+  useEffect(() => {
+    if (open) setReason("");
+  }, [open]);
+
   function handleConfirm() {
     const trimmed = reason.trim();
     if (!trimmed) return;
     onConfirm(trimmed);
-    setReason("");
-    onOpenChange(false);
-  }
-
-  function handleOpenChange(next: boolean) {
-    if (!next) setReason("");
-    onOpenChange(next);
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Amend authorized result</DialogTitle>
@@ -61,7 +58,7 @@ export function AuthorizedResultAmendDialog({
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" disabled={!reason.trim()} onClick={handleConfirm}>
