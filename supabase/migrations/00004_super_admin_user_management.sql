@@ -1,5 +1,6 @@
 -- Super administrators can manage staff profiles in their laboratory.
 
+drop policy if exists "profiles_update_super_admin_same_lab" on public.profiles;
 create policy "profiles_update_super_admin_same_lab"
   on public.profiles for update to authenticated
   using (
@@ -11,6 +12,7 @@ create policy "profiles_update_super_admin_same_lab"
     and public.current_user_role() = 'super_admin'
   );
 
+drop policy if exists "profiles_insert_super_admin_same_lab" on public.profiles;
 create policy "profiles_insert_super_admin_same_lab"
   on public.profiles for insert to authenticated
   with check (
