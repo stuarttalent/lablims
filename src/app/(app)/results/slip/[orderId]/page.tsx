@@ -33,6 +33,10 @@ export default function ResultSlipPage() {
       });
       return nextUrl;
     } catch {
+      setPdfBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       toast.error("Could not generate PDF preview.");
       return null;
     } finally {
