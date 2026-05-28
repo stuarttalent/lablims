@@ -12,6 +12,7 @@ create extension if not exists "pgcrypto";
 -- ---------------------------------------------------------------------------
 create type user_role as enum (
   'super_admin',
+  'lab_manager',
   'admin',
   'scientist',
   'tech',
@@ -71,12 +72,27 @@ create table public.laboratories (
   updated_at timestamptz not null default now()
 );
 
+create table public.lab_branches (
+  id uuid primary key default gen_random_uuid(),
+  laboratory_id uuid not null references public.laboratories (id) on delete cascade,
+  name text not null,
+  code text,
+  address text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (laboratory_id, name)
+);
+
+create index lab_branches_laboratory_id_idx on public.lab_branches (laboratory_id);
+
 -- ---------------------------------------------------------------------------
 -- Staff profiles (extends Supabase Auth)
 -- ---------------------------------------------------------------------------
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   laboratory_id uuid not null references public.laboratories (id) on delete cascade,
+  branch_id uuid references public.lab_branches (id) on delete set null,
   legacy_id text unique,
   email text not null,
   full_name text not null,
@@ -87,6 +103,7 @@ create table public.profiles (
 );
 
 create index profiles_laboratory_id_idx on public.profiles (laboratory_id);
+create index profiles_branch_id_idx on public.profiles (branch_id);
 create index profiles_email_idx on public.profiles (email);
 
 -- ---------------------------------------------------------------------------
@@ -286,6 +303,10 @@ create trigger profiles_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
+create trigger lab_branches_updated_at
+  before update on public.lab_branches
+  for each row execute function public.set_updated_at();
+
 create trigger patients_updated_at
   before update on public.patients
   for each row execute function public.set_updated_at();
@@ -352,6 +373,7 @@ create trigger on_auth_user_created
 -- ---------------------------------------------------------------------------
 alter table public.laboratories enable row level security;
 alter table public.profiles enable row level security;
+alter table public.lab_branches enable row level security;
 alter table public.lab_settings enable row level security;
 alter table public.doctors enable row level security;
 alter table public.patients enable row level security;
@@ -389,6 +411,11 @@ create policy "profiles_select_same_lab"
 create policy "profiles_update_own"
   on public.profiles for update to authenticated
   using (id = auth.uid());
+
+create policy "lab_branches_all_same_lab"
+  on public.lab_branches for all to authenticated
+  using (laboratory_id = public.current_laboratory_id())
+  with check (laboratory_id = public.current_laboratory_id());
 
 -- Laboratory & settings: same lab
 create policy "laboratories_select_own"

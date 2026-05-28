@@ -50,11 +50,26 @@ import { Loader2, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+type ManagedLab = {
+  id: string;
+  name: string;
+  slug: string;
+  branches: { id: string; name: string; code?: string | null; address?: string | null }[];
+  managers: { id: string; full_name: string; email: string }[];
+};
+
 async function fetchCloudStaff(): Promise<LabStaffMember[]> {
   const res = await fetch("/api/admin/users", { cache: "no-store" });
   const data = (await res.json()) as { users?: LabStaffMember[]; error?: string };
   if (!res.ok) throw new Error(data.error ?? "Could not load staff.");
   return data.users ?? [];
+}
+
+async function fetchLabs(): Promise<ManagedLab[]> {
+  const res = await fetch("/api/admin/laboratories", { cache: "no-store" });
+  const data = (await res.json()) as { laboratories?: ManagedLab[]; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Could not load laboratories.");
+  return data.laboratories ?? [];
 }
 
 export function UserManagementPanel() {
@@ -70,11 +85,25 @@ export function UserManagementPanel() {
   const [role, setRole] = useState<UserRole>("tech");
   const [credential, setCredential] = useState("");
 
+  const [labs, setLabs] = useState<ManagedLab[]>([]);
+  const [targetLabId, setTargetLabId] = useState("");
+  const [targetBranchId, setTargetBranchId] = useState("");
+  const [labName, setLabName] = useState("");
+  const [labSlug, setLabSlug] = useState("");
+  const [branchName, setBranchName] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       if (supabaseEnabled) {
         setStaff(await fetchCloudStaff());
+        if (user?.role === "super_admin") {
+          const loadedLabs = await fetchLabs();
+          setLabs(loadedLabs);
+          if (!targetLabId && loadedLabs[0]?.id) {
+            setTargetLabId(loadedLabs[0].id);
+          }
+        }
       } else {
         setStaff(listLocalStaff());
       }
@@ -83,7 +112,7 @@ export function UserManagementPanel() {
     } finally {
       setLoading(false);
     }
-  }, [supabaseEnabled]);
+  }, [supabaseEnabled, targetLabId, user?.role]);
 
   useEffect(() => {
     void load();
@@ -107,6 +136,10 @@ export function UserManagementPanel() {
             fullName: fullName.trim(),
             role,
             professionalCredential: credential.trim() || undefined,
+            laboratoryId:
+              user?.role === "super_admin" ? targetLabId || undefined : undefined,
+            branchId:
+              user?.role === "super_admin" ? targetBranchId || undefined : undefined,
           }),
         });
         const data = (await res.json()) as { error?: string };
@@ -133,6 +166,51 @@ export function UserManagementPanel() {
       toast.error(err instanceof Error ? err.message : "Could not create user.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCreateLab(e: React.FormEvent) {
+    e.preventDefault();
+    if (!labName.trim() || !labSlug.trim()) {
+      toast.error("Laboratory name and slug are required.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/laboratories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: labName.trim(), slug: labSlug.trim() }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not create laboratory.");
+      toast.success("Laboratory created.");
+      setLabName("");
+      setLabSlug("");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create laboratory.");
+    }
+  }
+
+  async function handleCreateBranch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!targetLabId || !branchName.trim()) {
+      toast.error("Select laboratory and enter branch name.");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/laboratories/${targetLabId}/branches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: branchName.trim() }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not create branch.");
+      toast.success("Branch added.");
+      setBranchName("");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create branch.");
     }
   }
 
@@ -169,9 +247,7 @@ export function UserManagementPanel() {
             : "Offline demo: added users are stored in this browser only. Cloud mode requires Supabase and SUPABASE_SERVICE_ROLE_KEY."}
         </p>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={<Button className="gap-2 shrink-0" />}
-          >
+          <DialogTrigger render={<Button className="gap-2 shrink-0" />}>
             <UserPlus className="size-4" />
             Add user
           </DialogTrigger>
@@ -230,6 +306,53 @@ export function UserManagementPanel() {
                   </SelectContent>
                 </Select>
               </div>
+              {user?.role === "super_admin" && supabaseEnabled ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Laboratory</Label>
+                    <Select
+                      value={targetLabId}
+                      onValueChange={(v) => {
+                        const next = v ?? "";
+                        setTargetLabId(next);
+                        setTargetBranchId("");
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select laboratory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {labs.map((lab) => (
+                          <SelectItem key={lab.id} value={lab.id}>
+                            {lab.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Branch (optional)</Label>
+                    <Select
+                      value={targetBranchId || "none"}
+                      onValueChange={(v) => setTargetBranchId(!v || v === "none" ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No branch</SelectItem>
+                        {(labs.find((lab) => lab.id === targetLabId)?.branches ?? []).map(
+                          (branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="staff-credential">Professional credential (optional)</Label>
                 <Input
@@ -249,6 +372,54 @@ export function UserManagementPanel() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {user?.role === "super_admin" && supabaseEnabled ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Laboratories & branches</CardTitle>
+            <CardDescription>
+              Create laboratories, add branches, and then assign lab managers or staff.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <form className="grid gap-3 sm:grid-cols-3" onSubmit={handleCreateLab}>
+              <Input
+                value={labName}
+                onChange={(e) => setLabName(e.target.value)}
+                placeholder="Laboratory name"
+              />
+              <Input
+                value={labSlug}
+                onChange={(e) => setLabSlug(e.target.value)}
+                placeholder="laboratory-slug"
+              />
+              <Button type="submit">Add laboratory</Button>
+            </form>
+            <form className="grid gap-3 sm:grid-cols-3" onSubmit={handleCreateBranch}>
+              <Select value={targetLabId} onValueChange={(v) => setTargetLabId(v ?? "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Laboratory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {labs.map((lab) => (
+                    <SelectItem key={lab.id} value={lab.id}>
+                      {lab.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                placeholder="Branch name"
+              />
+              <Button type="submit" variant="secondary">
+                Add branch
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

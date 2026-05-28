@@ -24,6 +24,7 @@ export type UpdateStaffInput = {
 };
 
 export const ASSIGNABLE_ROLES: UserRole[] = [
+  "lab_manager",
   "admin",
   "scientist",
   "tech",

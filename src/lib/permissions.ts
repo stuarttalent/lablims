@@ -2,6 +2,7 @@ import type { UserRole } from "@/types";
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: "Super administrator",
+  lab_manager: "Lab manager",
   admin: "Administrator",
   scientist: "Lab scientist",
   tech: "Lab technician",
@@ -11,12 +12,12 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 /** Full organization configuration: catalogue, users, pricing, integrations. */
 export function hasAdminPrivileges(role: UserRole): boolean {
-  return role === "admin" || role === "super_admin";
+  return role === "admin" || role === "super_admin" || role === "lab_manager";
 }
 
 /** Create staff accounts and assign roles. */
 export function canManageUsers(role: UserRole): boolean {
-  return role === "super_admin";
+  return role === "super_admin" || role === "lab_manager";
 }
 
 export function canAccessRoute(role: UserRole, path: string): boolean {

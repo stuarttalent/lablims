@@ -2,6 +2,7 @@ import type { ClinicalGuidance } from "@/lib/ai/clinical-guidance-types";
 
 export type UserRole =
   | "super_admin"
+  | "lab_manager"
   | "admin"
   | "scientist"
   | "tech"

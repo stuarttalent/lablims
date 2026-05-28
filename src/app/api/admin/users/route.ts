@@ -1,5 +1,4 @@
 import { requireLabAdmin } from "@/lib/admin/require-lab-admin";
-import { requireSuperAdmin } from "@/lib/admin/require-super-admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SUPER_ADMIN_ASSIGNABLE_ROLES } from "@/lib/users/roster-types";
@@ -10,6 +9,15 @@ export const runtime = "nodejs";
 
 function isUserRole(v: string): v is UserRole {
   return SUPER_ADMIN_ASSIGNABLE_ROLES.includes(v as UserRole);
+}
+
+function canRoleCreateUsers(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "lab_manager";
+}
+
+function canAssignRole(actorRole: UserRole, requestedRole: UserRole): boolean {
+  if (actorRole === "super_admin") return true;
+  return requestedRole !== "super_admin";
 }
 
 export async function GET() {
@@ -42,9 +50,26 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireSuperAdmin();
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status });
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+
+  const { data: actor, error: actorError } = await supabase
+    .from("profiles")
+    .select("id, role, laboratory_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (actorError || !actor?.laboratory_id) {
+    return NextResponse.json({ error: "Staff profile not found." }, { status: 403 });
+  }
+  const actorRole = actor.role as UserRole;
+  if (!canRoleCreateUsers(actorRole)) {
+    return NextResponse.json({ error: "You are not allowed to create users." }, { status: 403 });
   }
 
   const admin = createSupabaseAdminClient();
@@ -71,6 +96,8 @@ export async function POST(request: Request) {
     fullName,
     role,
     professionalCredential,
+    laboratoryId,
+    branchId,
   } = body as Record<string, unknown>;
 
   if (typeof email !== "string" || !email.trim()) {
@@ -88,8 +115,23 @@ export async function POST(request: Request) {
   if (typeof role !== "string" || !isUserRole(role)) {
     return NextResponse.json({ error: "A valid role is required." }, { status: 400 });
   }
+  if (!canAssignRole(actorRole, role)) {
+    return NextResponse.json({ error: "You cannot assign this role." }, { status: 403 });
+  }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const targetLaboratoryId =
+    actorRole === "super_admin" &&
+    typeof laboratoryId === "string" &&
+    laboratoryId.trim()
+      ? laboratoryId.trim()
+      : actor.laboratory_id;
+  if (actorRole !== "super_admin" && targetLaboratoryId !== actor.laboratory_id) {
+    return NextResponse.json(
+      { error: "You can only create users in your assigned laboratory." },
+      { status: 403 },
+    );
+  }
 
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: normalizedEmail,
@@ -117,7 +159,8 @@ export async function POST(request: Request) {
   const { error: profileError } = await admin
     .from("profiles")
     .update({
-      laboratory_id: auth.ctx.laboratoryId,
+      laboratory_id: targetLaboratoryId,
+      branch_id: typeof branchId === "string" && branchId.trim() ? branchId.trim() : null,
       email: normalizedEmail,
       full_name: fullName.trim(),
       role,
