@@ -610,6 +610,7 @@ const DEFAULT_SETTINGS = (): DemoStore["settings"] => ({
   fhirBaseUrl: "https://fhir.metropolitanclinlab.org/R4",
   fhirOrganizationId: "lab-main",
   letterheadA4PdfDataUrl: undefined,
+  resultSlipTemplateMode: "profile",
   catalogueOverrides: {},
 });
 

@@ -502,6 +502,8 @@ export async function persistSettingsUpdate(
   if (patch.logoDataUrl !== undefined) row.logo_data_url = patch.logoDataUrl ?? null;
   if (patch.letterheadA4PdfDataUrl !== undefined)
     row.letterhead_a4_pdf_data_url = patch.letterheadA4PdfDataUrl ?? null;
+  if (patch.resultSlipTemplateMode !== undefined)
+    row.result_slip_template_mode = patch.resultSlipTemplateMode ?? "profile";
   if (patch.priceOverrides != null) row.price_overrides = patch.priceOverrides;
   if (patch.catalogueOverrides != null)
     row.catalogue_overrides = patch.catalogueOverrides;

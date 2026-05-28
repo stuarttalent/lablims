@@ -257,6 +257,7 @@ export function mapSettings(
     lims_instance_id: string;
     logo_data_url: string | null;
     letterhead_a4_pdf_data_url: string | null;
+    result_slip_template_mode: "profile" | "letterhead" | null;
     price_overrides: Record<string, number>;
     catalogue_overrides: LabSettings["catalogueOverrides"];
     store_version: number;
@@ -278,6 +279,7 @@ export function mapSettings(
     limsInstanceId: row.lims_instance_id,
     logoDataUrl: row.logo_data_url ?? undefined,
     letterheadA4PdfDataUrl: row.letterhead_a4_pdf_data_url ?? undefined,
+    resultSlipTemplateMode: row.result_slip_template_mode ?? "profile",
     priceOverrides: row.price_overrides ?? {},
     catalogueOverrides: row.catalogue_overrides ?? {},
   };
