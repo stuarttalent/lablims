@@ -1,8 +1,8 @@
 import type { CatalogueTest } from "@/types";
 
-/** Tests shown on the default order / invoice pickers (excludes panel line items). */
+/** Tests shown on the default order / invoice pickers. */
 export function testsForOrderPicker(): CatalogueTest[] {
-  return TEST_CATALOGUE.filter((t) => !t.panelAnalyte);
+  return TEST_CATALOGUE;
 }
 
 const FBC_PANEL: CatalogueTest[] = [

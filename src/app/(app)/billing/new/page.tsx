@@ -1,7 +1,6 @@
 "use client";
 
 import { testsForOrderPicker } from "@/data/catalogue";
-import { ORDER_TEMPLATES, type OrderTemplate } from "@/data/order-templates";
 import { useData } from "@/contexts/data-context";
 import { resolveTestPrice } from "@/lib/pricing";
 import type { TestDepartment } from "@/types";
@@ -74,14 +73,6 @@ export default function NewInvoicePage() {
 
   const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
 
-  function applyTemplate(tpl: OrderTemplate) {
-    setSelected((s) => {
-      const next = { ...s };
-      for (const id of tpl.testIds) next[id] = true;
-      return next;
-    });
-  }
-
   const preview = useMemo(() => {
     const sub = selectedIds.reduce(
       (s, id) => s + resolveTestPrice(id, store.settings),
@@ -139,8 +130,7 @@ export default function NewInvoicePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New invoice</h1>
         <p className="text-sm text-muted-foreground">
-          Price list honours optional overrides from Settings. Templates add all analyte
-          lines for FBC (3- or 5-part), lipids, or U&amp;E.
+          Price list honours optional overrides from Settings.
         </p>
       </div>
       <Card className="border-border/70 shadow-sm">
@@ -248,31 +238,6 @@ export default function NewInvoicePage() {
           patientFullName={patient?.fullName ?? ""}
         />
       ) : null}
-
-      <Card className="border-border/70 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Templates</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Full panels at list price (charged on the primary analyte for each panel).
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ORDER_TEMPLATES.map((tpl) => (
-              <Button
-                key={tpl.id}
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="text-left h-auto min-h-9 py-2 px-3 whitespace-normal"
-                onClick={() => applyTemplate(tpl)}
-              >
-                <span className="block font-medium leading-snug">{tpl.label}</span>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
