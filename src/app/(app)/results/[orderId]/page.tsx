@@ -84,6 +84,38 @@ function buildLinePatch(
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
+function inferFlagFromResultRange(
+  resultValue?: string,
+  referenceRange?: string,
+): ResultFlag | undefined {
+  const raw = (resultValue ?? "").trim();
+  const rr = (referenceRange ?? "").trim();
+  if (!raw || !rr) return undefined;
+  const value = Number.parseFloat(raw.replace(",", "."));
+  if (!Number.isFinite(value)) return undefined;
+
+  const compact = rr.replace(/\s+/g, "");
+  const between = compact.match(/(-?\d+(?:\.\d+)?)\s*[-–]\s*(-?\d+(?:\.\d+)?)/);
+  if (between) {
+    const lo = Number.parseFloat(between[1]);
+    const hi = Number.parseFloat(between[2]);
+    if (value < lo) return "Low";
+    if (value > hi) return "High";
+    return "Normal";
+  }
+  const lt = compact.match(/^<?=?(-?\d+(?:\.\d+)?)/i) ?? compact.match(/<\s*(-?\d+(?:\.\d+)?)/i);
+  if (lt) {
+    const limit = Number.parseFloat(lt[1]);
+    return value <= limit ? "Normal" : "High";
+  }
+  const gt = compact.match(/^> ?=?(-?\d+(?:\.\d+)?)/i) ?? compact.match(/>\s*(-?\d+(?:\.\d+)?)/i);
+  if (gt) {
+    const limit = Number.parseFloat(gt[1]);
+    return value >= limit ? "Normal" : "Low";
+  }
+  return undefined;
+}
+
 function lineStatusLabel(s: LineResultStatus | undefined): string {
   if (s === "Pending Verification") return "Pending authorization";
   return s ?? "Draft";
@@ -170,18 +202,24 @@ export default function ResultsWorkspacePage() {
     patch: Partial<LineDraftFields>,
   ) {
     if (!order) return;
+    const candidateResult = patch.resultValue ?? line.resultValue;
+    const candidateRange = patch.referenceRange ?? line.referenceRange ?? meta?.referenceRange;
+    const autoFlag = inferFlagFromResultRange(candidateResult, candidateRange);
+    const nextPatch: Partial<LineDraftFields> = autoFlag
+      ? { ...patch, flag: autoFlag }
+      : patch;
     if (isAuthorizedResultLine(line)) {
       if (editingAuthorizedTestId !== line.testId) return;
       setLineDrafts((prev) => ({
         ...prev,
         [line.testId]: {
           ...(prev[line.testId] ?? lineToDraft(line, meta)),
-          ...patch,
+          ...nextPatch,
         },
       }));
       return;
     }
-    updateOrderLine(order.id, line.testId, patch);
+    updateOrderLine(order.id, line.testId, nextPatch);
   }
 
   function startAuthorizedEdit(
@@ -616,7 +654,7 @@ export default function ResultsWorkspacePage() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Flag</Label>
                     <Select
-                      disabled={lineFieldsDisabled(line)}
+                      disabled
                       value={displayLine.flag ?? "Normal"}
                       onValueChange={(v) =>
                         handleLineFieldChange(line, meta, {
@@ -635,6 +673,9 @@ export default function ResultsWorkspacePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      AI-assisted auto-flag from result vs reference range.
+                    </p>
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Comment</Label>

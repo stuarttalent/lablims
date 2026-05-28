@@ -23,12 +23,13 @@ export type SupabaseContext = {
   orderUuid: Map<string, string>;
 };
 
-function hasMissingBranchColumn(error: unknown): boolean {
+function hasMissingColumn(error: unknown, column: string): boolean {
   const msg =
     typeof error === "object" && error && "message" in error
       ? String((error as { message?: unknown }).message ?? "")
       : "";
-  return /branch_id/i.test(msg) && /(column|does not exist|schema cache)/i.test(msg);
+  const c = column.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(c, "i").test(msg) && /(column|does not exist|schema cache)/i.test(msg);
 }
 
 async function resolvePatientUuid(
@@ -120,7 +121,7 @@ export async function persistPatientInsert(
     .select("id")
     .single();
   if (error) {
-    if (!hasMissingBranchColumn(error)) throw error;
+    if (!hasMissingColumn(error, "branch_id")) throw error;
     const fallback = await supabase
       .from("patients")
       .insert({
@@ -172,7 +173,7 @@ export async function persistPatientUpdate(
     row.clinical_history = patch.clinicalHistory ?? null;
   const { error } = await supabase.from("patients").update(row).eq("id", uuid);
   if (error) {
-    if (!hasMissingBranchColumn(error)) throw error;
+    if (!hasMissingColumn(error, "branch_id")) throw error;
     delete row.branch_id;
     const { error: fallbackError } = await supabase
       .from("patients")
@@ -214,7 +215,7 @@ export async function persistOrderInsert(
     .select("id")
     .single();
   if (error) {
-    if (!hasMissingBranchColumn(error)) throw error;
+    if (!hasMissingColumn(error, "branch_id")) throw error;
     const fallback = await supabase
       .from("lab_orders")
       .insert({
@@ -313,7 +314,7 @@ export async function persistOrderUpdate(
   if (Object.keys(row).length > 0) {
     const { error } = await supabase.from("lab_orders").update(row).eq("id", uuid);
     if (error) {
-      if (!hasMissingBranchColumn(error)) throw error;
+      if (!hasMissingColumn(error, "branch_id")) throw error;
       delete row.branch_id;
       const { error: fallbackError } = await supabase
         .from("lab_orders")
@@ -413,8 +414,10 @@ export async function persistInvoiceInsert(
     medical_aid_details: invoice.medicalAidDetails ?? null,
   });
   if (error) {
-    if (!hasMissingBranchColumn(error)) throw error;
-    const { error: fallbackError } = await supabase.from("invoices").insert({
+    const missingBranch = hasMissingColumn(error, "branch_id");
+    const missingCurrency = hasMissingColumn(error, "currency_code");
+    if (!missingBranch && !missingCurrency) throw error;
+    const fallbackRow: Record<string, unknown> = {
       laboratory_id: ctx.laboratoryId,
       legacy_id: invoice.id,
       invoice_number: invoice.invoiceNumber,
@@ -425,12 +428,14 @@ export async function persistInvoiceInsert(
       discount: invoice.discount,
       tax: invoice.tax,
       total: invoice.total,
-      currency_code: invoice.currency,
       payment_method: invoice.paymentMethod ?? null,
       payment_status: invoice.paymentStatus,
       receipt_number: invoice.receiptNumber ?? null,
       medical_aid_details: invoice.medicalAidDetails ?? null,
-    });
+    };
+    if (!missingBranch) fallbackRow.branch_id = invoice.branchId ?? defaultBranchId;
+    if (!missingCurrency) fallbackRow.currency_code = invoice.currency;
+    const { error: fallbackError } = await supabase.from("invoices").insert(fallbackRow);
     if (fallbackError) throw fallbackError;
   }
 }
@@ -463,8 +468,11 @@ export async function persistInvoiceUpdate(
     row.medical_aid_details = patch.medicalAidDetails ?? null;
   const { error } = await supabase.from("invoices").update(row).eq("id", data.id);
   if (error) {
-    if (!hasMissingBranchColumn(error)) throw error;
-    delete row.branch_id;
+    const missingBranch = hasMissingColumn(error, "branch_id");
+    const missingCurrency = hasMissingColumn(error, "currency_code");
+    if (!missingBranch && !missingCurrency) throw error;
+    if (missingBranch) delete row.branch_id;
+    if (missingCurrency) delete row.currency_code;
     const { error: fallbackError } = await supabase
       .from("invoices")
       .update(row)

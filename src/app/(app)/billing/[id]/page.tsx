@@ -47,6 +47,11 @@ export default function InvoiceDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {inv.orderId ? (
+            <Button variant="secondary" asChild>
+              <Link href={`/orders/${inv.orderId}`}>Open test order</Link>
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="size-4" />
             Print / PDF
@@ -163,19 +168,19 @@ export default function InvoiceDetailPage() {
 
       <div
         id="invoice-print"
-        className="rounded-xl border border-border/70 bg-card p-6 shadow-sm print:shadow-none print:border-0"
+        className="relative overflow-hidden rounded-xl border border-border/70 bg-card p-6 shadow-sm print:shadow-none print:border-0 print:w-[210mm] print:min-h-[297mm]"
       >
         {store.settings.letterheadA4PdfDataUrl ? (
-          <div className="mb-4 rounded border p-2 bg-white">
+          <div className="pointer-events-none absolute inset-0 z-0">
             <object
               data={store.settings.letterheadA4PdfDataUrl}
               type="application/pdf"
-              className="h-[180px] w-full"
+              className="h-full w-full"
               aria-label="A4 letterhead"
             />
           </div>
         ) : null}
-        <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
+        <div className="relative z-10 flex items-start justify-between gap-4 border-b border-border/60 pb-4">
           <div>
             <p className="text-lg font-semibold tracking-tight">
               {store.settings.labName}

@@ -365,8 +365,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       medicalAidDetails?: Invoice["medicalAidDetails"];
     }) => {
       let inv: Invoice | null = null;
+      let createdOrder: LabOrder | null = null;
       commit((s) => {
         const uniqueTestIds = [...new Set(input.testIds)];
+        const effectiveOrderId = input.orderId ?? `ORD-${Date.now().toString().slice(-8)}`;
+        if (!input.orderId) {
+          createdOrder = {
+            id: effectiveOrderId,
+            patientId: input.patientId,
+            sampleType: "Serum",
+            priority: "Routine",
+            requestingDoctor:
+              s.patients.find((p) => p.id === input.patientId)?.referringDoctor ?? "",
+            collectionDate: new Date().toISOString().slice(0, 16),
+            status: "Requested",
+            createdAt: new Date().toISOString().slice(0, 16),
+            tests: uniqueTestIds.map((testId) => ({ testId, resultStatus: "Draft" })),
+          };
+        }
         const subtotal = uniqueTestIds.reduce(
           (sum, tid) => sum + resolveTestPrice(tid, s.settings),
           0,
@@ -378,7 +394,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           id: `inv-${Date.now().toString(36)}`,
           invoiceNumber: randomInvoiceNo(),
           patientId: input.patientId,
-          orderId: input.orderId,
+          orderId: effectiveOrderId,
           testIds: uniqueTestIds,
           subtotal,
           discount,
@@ -390,10 +406,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           medicalAidDetails: input.medicalAidDetails,
           createdAt: new Date().toISOString().slice(0, 10),
         };
-        return { ...s, invoices: [...s.invoices, inv] };
+        return {
+          ...s,
+          orders: createdOrder ? [...s.orders, createdOrder] : s.orders,
+          invoices: [...s.invoices, inv],
+        };
       });
       const ctx = supabaseCtxRef.current;
       if (ctx && inv) {
+        if (createdOrder) {
+          void persistOrderInsert(ctx, createdOrder).catch((e) =>
+            syncError("add order from invoice", e),
+          );
+        }
         void persistInvoiceInsert(ctx, inv).catch((e) =>
           syncError("add invoice", e),
         );
