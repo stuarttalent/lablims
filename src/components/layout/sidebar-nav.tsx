@@ -131,7 +131,7 @@ export function SidebarNav({ role }: { role: UserRole }) {
                 variant="destructive"
                 onClick={async () => {
                   await logout();
-                  router.push("/login");
+                  window.location.assign("/login");
                 }}
               >
                 <LogOut className="size-4 mr-2" />

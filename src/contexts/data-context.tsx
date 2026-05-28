@@ -81,7 +81,9 @@ type DataContextValue = {
   resetDemoData: () => void;
   addPatient: (p: Omit<Patient, "id" | "createdAt"> & Partial<Pick<Patient, "id">>) => Patient;
   updatePatient: (id: string, patch: Partial<Patient>) => void;
-  addOrder: (input: Omit<LabOrder, "id" | "createdAt" | "tests"> & { testIds: string[] }) => LabOrder;
+  addOrder: (
+    input: Omit<LabOrder, "id" | "createdAt" | "tests"> & { testIds: string[] },
+  ) => Promise<LabOrder>;
   updateOrder: (id: string, patch: Partial<LabOrder>) => void;
   updateOrderLine: (
     orderId: string,
@@ -124,7 +126,13 @@ type DataContextValue = {
 const DataContext = createContext<DataContextValue | null>(null);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const { user, laboratoryId, hydrated: authHydrated, supabaseEnabled } = useAuth();
+  const {
+    user,
+    laboratoryId,
+    branchId: authBranchId,
+    hydrated: authHydrated,
+    supabaseEnabled,
+  } = useAuth();
   const [store, setStore] = useState<DemoStore>(() => createInitialStore());
   const [hydrated, setHydrated] = useState(false);
   const [dataSource, setDataSource] = useState<"local" | "supabase">("local");
@@ -238,6 +246,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         created = {
           ...input,
           id,
+          branchId: input.branchId ?? authBranchId ?? undefined,
           createdAt: new Date().toISOString().slice(0, 10),
         };
         return { ...s, patients: [...s.patients, created] };
@@ -250,7 +259,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return created!;
     },
-    [commit],
+    [commit, authBranchId],
   );
 
   const updatePatient = useCallback(
@@ -270,7 +279,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addOrder = useCallback(
-    (
+    async (
       input: Omit<LabOrder, "id" | "createdAt" | "tests"> & { testIds: string[] },
     ) => {
       let order: LabOrder | null = null;
@@ -283,6 +292,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }));
         order = {
           id,
+          branchId: input.branchId ?? authBranchId ?? undefined,
           patientId: input.patientId,
           sampleType: input.sampleType,
           priority: input.priority,
@@ -299,11 +309,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
       const ctx = supabaseCtxRef.current;
       if (ctx && order) {
-        void persistOrderInsert(ctx, order).catch((e) => syncError("add order", e));
+        try {
+          await persistOrderInsert(ctx, order);
+        } catch (e) {
+          syncError("add order", e);
+        }
       }
       return order!;
     },
-    [commit],
+    [commit, authBranchId],
   );
 
   const updateOrder = useCallback(
@@ -388,6 +402,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!input.orderId) {
           createdOrder = {
             id: effectiveOrderId,
+            branchId: authBranchId ?? undefined,
             patientId: input.patientId,
             sampleType: "Serum",
             priority: "Routine",
@@ -409,6 +424,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         inv = {
           id: `inv-${Date.now().toString(36)}`,
           invoiceNumber: randomInvoiceNo(),
+          branchId: authBranchId ?? undefined,
           patientId: input.patientId,
           orderId: effectiveOrderId,
           testIds: uniqueTestIds,
@@ -443,7 +459,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return inv!;
     },
-    [commit],
+    [commit, authBranchId],
   );
 
   const updateInvoice = useCallback(

@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { ensureCatalogueTestsForLaboratory } from "@/lib/supabase/ensure-catalogue";
 
 async function db() {
   const client = await getSupabaseClient();
@@ -70,12 +71,22 @@ async function resolveOrderUuid(
   return null;
 }
 
-async function resolveDefaultBranchId(laboratoryId: string): Promise<string | null> {
+export async function resolveDefaultBranchId(
+  laboratoryId: string,
+): Promise<string | null> {
   const supabase = await db();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("branch_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.branch_id) return profile.branch_id;
+
   const { data } = await supabase
     .from("profile_branch_memberships")
     .select("branch_id, lab_branches!inner(laboratory_id)")
@@ -84,6 +95,33 @@ async function resolveDefaultBranchId(laboratoryId: string): Promise<string | nu
     .limit(1)
     .maybeSingle();
   return data?.branch_id ?? null;
+}
+
+async function resolveOrderBranchId(
+  ctx: SupabaseContext,
+  orderUuid: string,
+): Promise<string | null> {
+  const supabase = await db();
+  const { data } = await supabase
+    .from("lab_orders")
+    .select("branch_id")
+    .eq("id", orderUuid)
+    .eq("laboratory_id", ctx.laboratoryId)
+    .maybeSingle();
+  return data?.branch_id ?? (await resolveDefaultBranchId(ctx.laboratoryId));
+}
+
+async function resolveOrderUuidWithRetry(
+  ctx: SupabaseContext,
+  appOrderId: string,
+  attempts = 5,
+): Promise<string | null> {
+  for (let i = 0; i < attempts; i++) {
+    const uuid = await resolveOrderUuid(ctx, appOrderId);
+    if (uuid) return uuid;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return null;
 }
 
 function resolveProfileUuid(
@@ -187,11 +225,13 @@ export async function persistOrderInsert(
   ctx: SupabaseContext,
   order: LabOrder,
 ): Promise<void> {
+  await ensureCatalogueTestsForLaboratory(ctx.laboratoryId);
+
   const patientUuid = await resolvePatientUuid(ctx, order.patientId);
   if (!patientUuid) throw new Error("Patient not found for order.");
 
   const supabase = await db();
-  const defaultBranchId = await resolveDefaultBranchId(ctx.laboratoryId);
+  const defaultBranchId = order.branchId ?? (await resolveDefaultBranchId(ctx.laboratoryId));
   const { data, error } = await supabase
     .from("lab_orders")
     .insert({
@@ -210,7 +250,7 @@ export async function persistOrderInsert(
       include_ai_comment_in_report: order.includeAiCommentInReport ?? false,
       assigned_tech_id: resolveProfileUuid(ctx, order.assignedTechId),
       assigned_scientist_id: resolveProfileUuid(ctx, order.assignedScientistId),
-      branch_id: order.branchId ?? defaultBranchId,
+      branch_id: defaultBranchId,
     })
     .select("id")
     .single();
@@ -240,8 +280,9 @@ export async function persistOrderInsert(
     if (fallback.error) throw fallback.error;
     ctx.orderUuid.set(order.id, fallback.data.id);
     if (order.tests.length > 0) {
+      const branchId = await resolveOrderBranchId(ctx, fallback.data.id);
       const { error: lineErr } = await supabase.from("order_test_lines").insert(
-        order.tests.map((t, i) => lineRow(ctx, fallback.data.id, t, i)),
+        order.tests.map((t, i) => lineRow(ctx, fallback.data.id, t, i, branchId)),
       );
       if (lineErr) throw lineErr;
     }
@@ -250,8 +291,9 @@ export async function persistOrderInsert(
   ctx.orderUuid.set(order.id, data.id);
 
   if (order.tests.length > 0) {
+    const branchId = await resolveOrderBranchId(ctx, data.id);
     const { error: lineErr } = await supabase.from("order_test_lines").insert(
-      order.tests.map((t, i) => lineRow(ctx, data.id, t, i)),
+      order.tests.map((t, i) => lineRow(ctx, data.id, t, i, branchId)),
     );
     if (lineErr) throw lineErr;
   }
@@ -262,10 +304,12 @@ function lineRow(
   orderUuid: string,
   line: OrderTestLine,
   sortOrder: number,
+  branchId: string | null,
 ) {
   return {
     order_id: orderUuid,
     laboratory_id: ctx.laboratoryId,
+    branch_id: branchId,
     test_id: line.testId,
     result_value: line.resultValue ?? null,
     units: line.units ?? null,
@@ -324,10 +368,11 @@ export async function persistOrderUpdate(
     }
   }
   if (patch.tests) {
+    const branchId = await resolveOrderBranchId(ctx, uuid);
     await supabase.from("order_test_lines").delete().eq("order_id", uuid);
     if (patch.tests.length > 0) {
       const { error: lineErr } = await supabase.from("order_test_lines").insert(
-        patch.tests.map((t, i) => lineRow(ctx, uuid, t, i)),
+        patch.tests.map((t, i) => lineRow(ctx, uuid, t, i, branchId)),
       );
       if (lineErr) throw lineErr;
     }
@@ -340,9 +385,16 @@ export async function persistOrderLineUpdate(
   testId: string,
   patch: Partial<OrderTestLine>,
 ): Promise<void> {
-  const orderUuid = await resolveOrderUuid(ctx, orderId);
-  if (!orderUuid) return;
+  await ensureCatalogueTestsForLaboratory(ctx.laboratoryId);
+
+  const orderUuid = await resolveOrderUuidWithRetry(ctx, orderId);
+  if (!orderUuid) {
+    throw new Error(
+      `Order ${orderId} is not in the cloud yet. Wait a moment and try saving again.`,
+    );
+  }
   const supabase = await db();
+  const branchId = await resolveOrderBranchId(ctx, orderUuid);
   const row: Record<string, unknown> = {};
   if (patch.resultValue !== undefined) row.result_value = patch.resultValue ?? null;
   if (patch.units !== undefined) row.units = patch.units ?? null;
@@ -376,9 +428,18 @@ export async function persistOrderLineUpdate(
     if (error) throw error;
   } else {
     const merged: OrderTestLine = { testId, ...patch };
-    const { error } = await supabase
-      .from("order_test_lines")
-      .insert(lineRow(ctx, orderUuid, merged, 0));
+    const row = lineRow(ctx, orderUuid, merged, 0, branchId);
+    const { error } = await supabase.from("order_test_lines").insert(row);
+    if (error && hasMissingColumn(error, "branch_id")) {
+      const { branch_id: _b, ...withoutBranch } = row as Record<string, unknown> & {
+        branch_id?: string | null;
+      };
+      const { error: fallbackError } = await supabase
+        .from("order_test_lines")
+        .insert(withoutBranch);
+      if (fallbackError) throw fallbackError;
+      return;
+    }
     if (error) throw error;
   }
 }

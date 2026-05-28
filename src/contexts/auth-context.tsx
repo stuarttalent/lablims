@@ -22,6 +22,7 @@ const AUTH_KEY = "lablims-session-v1";
 type AuthContextValue = {
   user: MockUser | null;
   laboratoryId: string | null;
+  branchId: string | null;
   hydrated: boolean;
   supabaseEnabled: boolean;
   login: (userId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -37,20 +38,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 async function loadUserFromSession(): Promise<{
   user: MockUser | null;
   laboratoryId: string | null;
+  branchId: string | null;
 }> {
   const supabase = await getSupabaseClient();
-  if (!supabase) return { user: null, laboratoryId: null };
+  if (!supabase) return { user: null, laboratoryId: null, branchId: null };
 
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session?.user) return { user: null, laboratoryId: null };
+  if (!session?.user) return { user: null, laboratoryId: null, branchId: null };
 
   let profile = await fetchProfileForUser(session.user.id);
-  if (!profile) return { user: null, laboratoryId: null };
+  if (!profile) return { user: null, laboratoryId: null, branchId: null };
   if (profile.suspended_at) {
     await supabase.auth.signOut();
-    return { user: null, laboratoryId: null };
+    return { user: null, laboratoryId: null, branchId: null };
   }
 
   const laboratoryId = await ensureLaboratoryForUser(session.user.id);
@@ -59,6 +61,7 @@ async function loadUserFromSession(): Promise<{
   return {
     user: profileToMockUser(profile),
     laboratoryId: profile.laboratory_id ?? laboratoryId,
+    branchId: (profile as { branch_id?: string | null }).branch_id ?? null,
   };
 }
 
@@ -69,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialSupabase = useInitialSupabaseConfig();
   const [user, setUser] = useState<MockUser | null>(null);
   const [laboratoryId, setLaboratoryId] = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [supabaseEnabled, setSupabaseEnabled] = useState(
     () => initialSupabase?.enabled ?? false,
@@ -84,10 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (config.enabled) {
         try {
-          const { user: u, laboratoryId: labId } = await loadUserFromSession();
+          const { user: u, laboratoryId: labId, branchId: brId } =
+            await loadUserFromSession();
           if (!cancelled) {
             setUser(u);
             setLaboratoryId(labId);
+            setBranchId(brId);
           }
         } catch (e) {
           console.error("Supabase auth init failed:", e);
@@ -97,11 +103,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (supabase && !cancelled) {
           const {
             data: { subscription },
-          } = supabase.auth.onAuthStateChange(async () => {
-            const { user: u, laboratoryId: labId } = await loadUserFromSession();
+          } = supabase.auth.onAuthStateChange(async (event) => {
+            if (event === "SIGNED_OUT") {
+              if (!cancelled) {
+                setUser(null);
+                setLaboratoryId(null);
+                setBranchId(null);
+                localStorage.removeItem(AUTH_KEY);
+              }
+              return;
+            }
+            const { user: u, laboratoryId: labId, branchId: brId } =
+              await loadUserFromSession();
             if (!cancelled) {
               setUser(u);
               setLaboratoryId(labId);
+              setBranchId(brId);
             }
           });
           unsubscribe = () => subscription.unsubscribe();
@@ -143,7 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         return { ok: false as const, message: error.message };
       }
-      const { user: u, laboratoryId: labId } = await loadUserFromSession();
+      const { user: u, laboratoryId: labId, branchId: brId } =
+        await loadUserFromSession();
       if (!u) {
         return {
           ok: false as const,
@@ -153,10 +171,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(u);
       setLaboratoryId(labId);
+      setBranchId(brId);
       return { ok: true as const };
     }
 
     setUser(mock);
+    setBranchId(null);
     localStorage.setItem(AUTH_KEY, mock.id);
     return { ok: true as const };
   }, []);
@@ -172,7 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           return { ok: false as const, message: error.message };
         }
-        const { user: u, laboratoryId: labId } = await loadUserFromSession();
+        const { user: u, laboratoryId: labId, branchId: brId } =
+          await loadUserFromSession();
         if (!u) {
           return {
             ok: false as const,
@@ -182,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(u);
         setLaboratoryId(labId);
+        setBranchId(brId);
         return { ok: true as const };
       }
 
@@ -205,9 +227,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const supabase = await getSupabaseClient();
-    if (supabase) await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut({ scope: "global" });
+    }
     setUser(null);
     setLaboratoryId(null);
+    setBranchId(null);
     localStorage.removeItem(AUTH_KEY);
   }, []);
 
@@ -215,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       laboratoryId,
+      branchId,
       hydrated,
       supabaseEnabled,
       login,
@@ -224,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [
       user,
       laboratoryId,
+      branchId,
       hydrated,
       supabaseEnabled,
       login,

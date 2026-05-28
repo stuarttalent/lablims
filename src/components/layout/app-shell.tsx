@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   size="sm"
                   onClick={async () => {
                     await logout();
-                    router.push("/login");
+                    window.location.assign("/login");
                   }}
                 >
                   <LogOut className="size-4" />

@@ -10,6 +10,7 @@ import {
   emptyStoreWithSettings,
 } from "@/lib/supabase/mappers";
 import { createInitialStore } from "@/data/seed";
+import { ensureCatalogueTestsForLaboratory } from "@/lib/supabase/ensure-catalogue";
 import {
   buildSupabaseContext,
   registerStoreUuids,
@@ -27,6 +28,12 @@ export async function loadStoreFromSupabase(
 ): Promise<LoadedSupabaseStore> {
   const supabase = await getSupabaseClient();
   if (!supabase) throw new Error("Supabase client is not available");
+
+  try {
+    await ensureCatalogueTestsForLaboratory(laboratoryId);
+  } catch (e) {
+    console.warn("Catalogue sync failed:", e);
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -190,6 +197,8 @@ export async function ensureLaboratoryForUser(userId: string): Promise<string> {
     .from("profiles")
     .update({ laboratory_id: lab.id })
     .eq("id", userId);
+
+  await ensureCatalogueTestsForLaboratory(lab.id);
 
   return lab.id;
 }

@@ -77,7 +77,7 @@ export default function NewOrderPage() {
     setSelected((s) => ({ ...s, [id]: checked }));
   }
 
-  function submit() {
+  async function submit() {
     if (!patientId) {
       toast.error("Select a patient.");
       return;
@@ -86,7 +86,7 @@ export default function NewOrderPage() {
       toast.error("Select at least one test.");
       return;
     }
-    const order = addOrder({
+    const order = await addOrder({
       patientId,
       sampleType,
       priority,
