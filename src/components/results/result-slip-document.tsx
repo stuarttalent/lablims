@@ -101,71 +101,78 @@ export function ResultSlipDocument({
   const released =
     order.status === "Released" ||
     order.tests.some((l) => l.resultStatus === "Released");
+  const letterheadPdfUrl =
+    branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl ?? null;
+  const hasA4Letterhead = Boolean(letterheadPdfUrl);
 
   const attributionRows = uniqueAttributionRows(order.tests);
 
   return (
     <div
       id="lablims-result-slip"
-      className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy]"
+      className={`relative overflow-hidden rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
     >
+      {hasA4Letterhead ? (
+        <div className="pointer-events-none absolute inset-0 z-0">
+          <object
+            data={letterheadPdfUrl ?? undefined}
+            type="application/pdf"
+            className="h-full w-full"
+            aria-label="A4 letterhead"
+          />
+        </div>
+      ) : null}
+
       <div
-        className="h-1.5 bg-gradient-to-r from-teal-700 via-emerald-500 to-teal-600 print:h-1 print:bg-slate-700 print:[background-image:none]"
+        className={`h-1.5 bg-gradient-to-r from-teal-700 via-emerald-500 to-teal-600 print:h-1 print:bg-slate-700 print:[background-image:none] ${hasA4Letterhead ? "opacity-0" : ""}`}
         aria-hidden
       />
 
-      <div className="p-8 pb-6 print:p-7">
-        {branchLetterheadPdf || store.settings.letterheadA4PdfDataUrl ? (
-          <div className="mb-4 rounded-xl border border-slate-200 p-2 bg-white">
-            <object
-              data={branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl}
-              type="application/pdf"
-              className="h-[180px] w-full rounded"
-              aria-label="Branch letterhead PDF"
-            />
-          </div>
-        ) : null}
-
+      <div className="relative z-10 p-8 pb-6 print:p-7">
         <header className="flex flex-col gap-6 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:border-slate-300">
-          <div className="flex flex-1 flex-wrap items-start gap-5">
-            {store.settings.logoDataUrl ? (
-              <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/80 p-2 print:border-slate-300 print:bg-white">
-                {/* eslint-disable-next-line @next/next/no-img-element -- data URL letterhead for PDF capture */}
-                <img
-                  src={store.settings.logoDataUrl}
-                  alt=""
-                  className="max-h-full max-w-full object-contain"
-                />
+          {!hasA4Letterhead ? (
+            <div className="flex flex-1 flex-wrap items-start gap-5">
+              {store.settings.logoDataUrl ? (
+                <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/80 p-2 print:border-slate-300 print:bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL letterhead for PDF capture */}
+                  <img
+                    src={store.settings.logoDataUrl}
+                    alt=""
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-emerald-700 text-lg font-bold tracking-tight text-white shadow-md print:bg-slate-800 print:text-white print:shadow-none print:[background-image:none]">
+                  {store.settings.labName
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((w) => w[0])
+                    .join("")}
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-teal-950 print:text-slate-900">
+                  {store.settings.labName}
+                </h1>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-teal-700/80 print:text-slate-700">
+                  {store.settings.tagline}
+                </p>
+                <p className="max-w-md text-[11px] leading-relaxed text-slate-600 print:text-slate-800">
+                  {store.settings.address}
+                </p>
+                <p className="text-[11px] text-slate-600 print:text-slate-800">
+                  Tel <span className="font-medium">{store.settings.phone}</span>
+                  {" · "}
+                  <span className="font-medium">{store.settings.email}</span>
+                </p>
+                <p className="text-[10px] text-slate-500 print:text-slate-600">
+                  Licence / registration: {store.settings.registrationNumber}
+                </p>
               </div>
-            ) : (
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-emerald-700 text-lg font-bold tracking-tight text-white shadow-md print:bg-slate-800 print:text-white print:shadow-none print:[background-image:none]">
-                {store.settings.labName
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((w) => w[0])
-                  .join("")}
-              </div>
-            )}
-            <div className="min-w-0 space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight text-teal-950 print:text-slate-900">
-                {store.settings.labName}
-              </h1>
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-teal-700/80 print:text-slate-700">
-                {store.settings.tagline}
-              </p>
-              <p className="max-w-md text-[11px] leading-relaxed text-slate-600 print:text-slate-800">
-                {store.settings.address}
-              </p>
-              <p className="text-[11px] text-slate-600 print:text-slate-800">
-                Tel <span className="font-medium">{store.settings.phone}</span>
-                {" · "}
-                <span className="font-medium">{store.settings.email}</span>
-              </p>
-              <p className="text-[10px] text-slate-500 print:text-slate-600">
-                Licence / registration: {store.settings.registrationNumber}
-              </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1" />
+          )}
 
           <div className="flex shrink-0 flex-col items-end gap-3 sm:pl-4">
             <div className="rounded-lg border border-teal-200 bg-teal-50/90 px-3 py-1.5 text-center shadow-sm print:border-2 print:border-slate-500 print:bg-white print:shadow-none">
