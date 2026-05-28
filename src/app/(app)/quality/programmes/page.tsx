@@ -165,7 +165,12 @@ export default function QualityProgrammesPage() {
         { label: "Analyte", value: selectedAnalyte || "None", icon: ShieldCheck },
       ]}
     >
-      <Tabs value={activeType} onValueChange={(v) => setType(v as QCType)}>
+      <Tabs
+        value={activeType}
+        onValueChange={(v) => {
+          if (v === "IQC" || v === "EQC") setType(v);
+        }}
+      >
         <TabsList>
           <TabsTrigger value="IQC">IQC</TabsTrigger>
           <TabsTrigger value="EQC">EQC</TabsTrigger>
@@ -191,7 +196,10 @@ export default function QualityProgrammesPage() {
             <Label>Programme</Label>
             <Select
               value={form.programme}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, programme: v }))}
+              onValueChange={(v) => {
+                if (!v) return;
+                setForm((prev) => ({ ...prev, programme: v }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Programme" />
@@ -209,7 +217,10 @@ export default function QualityProgrammesPage() {
             <Label>Analyte</Label>
             <Select
               value={form.analyte}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, analyte: v }))}
+              onValueChange={(v) => {
+                if (!v) return;
+                setForm((prev) => ({ ...prev, analyte: v }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Analyte" />
