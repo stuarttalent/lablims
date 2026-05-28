@@ -1,6 +1,7 @@
 "use client";
 
 import { getTestById } from "@/data/catalogue";
+import { groupOrderTests } from "@/lib/group-order-tests";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -562,8 +563,17 @@ export default function ResultsWorkspacePage() {
             </Button>
           )}
         </CardHeader>
-        <CardContent className="space-y-6">
-          {order.tests.map((line, idx) => {
+        <CardContent className="space-y-8">
+          {groupOrderTests(order.tests).map((group) => (
+            <div key={group.id} className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/30 p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-blue-200 pb-2">
+                <h3 className="text-sm font-bold text-blue-800">{group.title}</h3>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Specimen: {group.specimenType}
+                </span>
+              </div>
+              <div className="space-y-6">
+          {group.lines.map((line, idx) => {
             const meta = getTestById(line.testId);
             const suggestedRef = resolveReferenceRangeForPatient(
               line.testId,
@@ -1004,6 +1014,9 @@ export default function ResultsWorkspacePage() {
               </div>
             );
           })}
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

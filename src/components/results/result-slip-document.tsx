@@ -1,18 +1,12 @@
 "use client";
 
-import { getTestById } from "@/data/catalogue";
-import type { DemoStore, LabOrder, OrderTestLine, Patient, TestDepartment } from "@/types";
+import { ResultProfileResultsTable } from "@/components/results/result-profile-results-table";
+import { groupOrderTests } from "@/lib/group-order-tests";
+import { letterheadPdfToImage } from "@/lib/letterhead-image";
+import type { DemoStore, LabOrder, OrderTestLine, Patient } from "@/types";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { buildResultVerificationToken } from "@/lib/verification-token";
-
-const DEPT_ORDER: TestDepartment[] = [
-  "Haematology",
-  "Chemistry",
-  "Microbiology",
-  "Serology/Immunology",
-  "Molecular",
-];
 
 /** One row per distinct enterer / authorizer combination (no repeated users). */
 function uniqueAttributionRows(tests: OrderTestLine[]): OrderTestLine[] {
@@ -37,13 +31,18 @@ export function ResultSlipDocument({
   order,
   patient,
   store,
+  onReady,
 }: {
   order: LabOrder;
   patient?: Patient;
   store: DemoStore;
+  /** Fired when QR and letterhead assets are ready for PDF capture. */
+  onReady?: () => void;
 }) {
   const [qrSrc, setQrSrc] = useState<string | null>(null);
   const [branchLetterheadPdf, setBranchLetterheadPdf] = useState<string | null>(null);
+  const [letterheadImage, setLetterheadImage] = useState<string | null>(null);
+  const [letterheadResolved, setLetterheadResolved] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,23 +86,41 @@ export function ResultSlipDocument({
     };
   }, [order.branchId]);
 
-  const grouped = new Map<TestDepartment, typeof order.tests>();
-  for (const d of DEPT_ORDER) grouped.set(d, []);
-  for (const line of order.tests) {
-    const dep = getTestById(line.testId)?.department;
-    if (!dep) continue;
-    const arr = grouped.get(dep) ?? [];
-    arr.push(line);
-    grouped.set(dep, arr);
-  }
+  const letterheadPdfUrl =
+    branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!letterheadPdfUrl) {
+      setLetterheadImage(null);
+      setLetterheadResolved(true);
+      return;
+    }
+    setLetterheadResolved(false);
+    void letterheadPdfToImage(letterheadPdfUrl)
+      .then((img) => {
+        if (!cancelled) setLetterheadImage(img);
+      })
+      .finally(() => {
+        if (!cancelled) setLetterheadResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [letterheadPdfUrl]);
+
+  useEffect(() => {
+    if (!letterheadResolved) return;
+    onReady?.();
+  }, [letterheadResolved, onReady]);
+
+  const resultGroups = groupOrderTests(order.tests);
 
   const reportDate = new Date().toISOString().slice(0, 10);
   const released =
     order.status === "Released" ||
     order.tests.some((l) => l.resultStatus === "Released");
-  const letterheadPdfUrl =
-    branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl ?? null;
-  const hasA4Letterhead = Boolean(letterheadPdfUrl);
+  const hasA4Letterhead = Boolean(letterheadImage || letterheadPdfUrl);
 
   const attributionRows = uniqueAttributionRows(order.tests);
 
@@ -113,13 +130,13 @@ export function ResultSlipDocument({
       data-has-pdf-letterhead={hasA4Letterhead ? "true" : "false"}
       className={`relative rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:w-[210mm] print:min-h-[297mm] print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
     >
-      {hasA4Letterhead ? (
+      {letterheadImage ? (
         <div className="pointer-events-none absolute inset-0 z-0">
-          <object
-            data={letterheadPdfUrl ?? undefined}
-            type="application/pdf"
-            className="h-full w-full"
-            aria-label="A4 letterhead"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={letterheadImage}
+            alt=""
+            className="h-full w-full object-fill"
           />
         </div>
       ) : null}
@@ -244,98 +261,26 @@ export function ResultSlipDocument({
           </div>
         </section>
 
-        <div className="mt-6 space-y-8">
-          {DEPT_ORDER.map((dep) => {
-            const lines = grouped.get(dep) ?? [];
-            if (lines.length === 0) return null;
-            return (
-              <div key={dep} className="print:break-inside-avoid-page">
-                <div className="flex items-center gap-2">
-                  <span className="h-px flex-1 bg-gradient-to-r from-teal-600/50 to-transparent print:bg-slate-400 print:[background-image:none]" />
-                  <h2 className="shrink-0 text-xs font-bold uppercase tracking-[0.15em] text-teal-900 print:text-slate-900">
-                    {dep}
-                  </h2>
-                  <span className="h-px flex-1 bg-gradient-to-l from-teal-600/50 to-transparent print:bg-slate-400 print:[background-image:none]" />
-                </div>
-                <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 print:border-slate-400">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-gradient-to-r from-slate-800 to-slate-700 text-white print:bg-slate-800 print:text-white print:[background-image:none]">
-                        <th className="px-3 py-2.5 text-left font-semibold">
-                          Test
-                        </th>
-                        <th className="px-3 py-2.5 text-left font-semibold">
-                          Result
-                        </th>
-                        <th className="px-3 py-2.5 text-left font-semibold">
-                          Units
-                        </th>
-                        <th className="px-3 py-2.5 text-left font-semibold">
-                          Reference
-                        </th>
-                        <th className="px-3 py-2.5 text-left font-semibold">
-                          Flag
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((line, idx) => {
-                        const meta = getTestById(line.testId);
-                        const abnormal = line.flag && line.flag !== "Normal";
-                        return (
-                          <tr
-                            key={line.testId}
-                            className={
-                              idx % 2 === 0
-                                ? "bg-white print:bg-white"
-                                : "bg-slate-50/80 print:bg-slate-100"
-                            }
-                          >
-                            <td
-                              className={`px-3 py-2.5 font-medium print:text-slate-900 ${abnormal ? "text-amber-900 print:text-slate-900 print:font-semibold" : "text-slate-900"}`}
-                            >
-                              {meta?.name ?? line.testId}
-                            </td>
-                            <td className="px-3 py-2.5 font-semibold text-slate-900 print:text-black">
-                              {line.resultValue ?? "—"}
-                            </td>
-                            <td className="px-3 py-2.5 text-slate-700 print:text-slate-800">
-                              {line.units ?? meta?.units ?? "—"}
-                            </td>
-                            <td className="px-3 py-2.5 text-slate-600 print:text-slate-800">
-                              {line.referenceRange ?? meta?.referenceRange ?? "—"}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <span
-                                className={
-                                  abnormal
-                                    ? "rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900 print:bg-white print:px-2 print:py-0.5 print:font-semibold print:text-slate-900 print:ring-1 print:ring-slate-500"
-                                    : "text-slate-600 print:text-slate-800"
-                                }
-                              >
-                                {line.flag ?? "—"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {lines.map((line) =>
-                    line.comment ? (
-                      <p
-                        key={`${line.testId}-c`}
-                        className="border-t border-slate-100 bg-amber-50/50 px-3 py-2 text-[11px] text-amber-950 print:border-slate-300 print:bg-white print:border-l-4 print:border-l-slate-600 print:text-slate-900"
-                      >
-                        <span className="font-semibold">Clinical comment:</span>{" "}
-                        {line.comment}
-                      </p>
-                    ) : null,
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="mt-6 space-y-6">
+          {resultGroups.map((group) => (
+            <div key={group.id}>
+              <ResultProfileResultsTable
+                title={group.title}
+                lines={group.lines}
+                specimenType={group.specimenType}
+              />
+              {group.lines.map((line) =>
+                line.comment ? (
+                  <p
+                    key={`${line.testId}-c`}
+                    className="mt-1 border-l-2 border-slate-400 pl-2 text-[10px] text-slate-700"
+                  >
+                    <span className="font-semibold">Comment:</span> {line.comment}
+                  </p>
+                ) : null,
+              )}
+            </div>
+          ))}
         </div>
 
         <section className="mt-8 overflow-hidden rounded-xl border border-teal-100 bg-gradient-to-b from-white to-teal-50/30 shadow-sm print:break-inside-avoid print:border-2 print:border-slate-400 print:bg-white print:from-white print:to-white print:shadow-none">

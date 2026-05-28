@@ -6,7 +6,7 @@ import { SlipExportActions } from "@/components/results/slip-export-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildResultSlipPdfBlob } from "@/lib/result-slip-pdf";
 import { toast } from "sonner";
 
@@ -18,7 +18,12 @@ export default function ResultSlipPage() {
   const patient = store.patients.find((p) => p.id === order.patientId);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [slipRenderTick, setSlipRenderTick] = useState(0);
   const pdfSourceId = useMemo(() => `lablims-result-slip-source-${order.id}`, [order.id]);
+
+  const handleSlipReady = useCallback(() => {
+    setSlipRenderTick((n) => n + 1);
+  }, []);
 
   async function regeneratePdfPreview() {
     const source = document.getElementById(pdfSourceId);
@@ -45,11 +50,18 @@ export default function ResultSlipPage() {
   }
 
   useEffect(() => {
+    if (slipRenderTick === 0) return;
     const timer = window.setTimeout(() => {
       void regeneratePdfPreview();
-    }, 250);
+    }, 500);
     return () => window.clearTimeout(timer);
-  }, [pdfSourceId, order.createdAt, order.tests, store.settings.letterheadA4PdfDataUrl]);
+  }, [
+    slipRenderTick,
+    pdfSourceId,
+    order.createdAt,
+    order.tests,
+    store.settings.letterheadA4PdfDataUrl,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -100,9 +112,17 @@ export default function ResultSlipPage() {
         )}
       </div>
 
-      <div className="fixed -left-[10000px] top-0 w-[210mm] pointer-events-none opacity-0">
+      <div
+        className="absolute left-[-12000px] top-0 w-[210mm] overflow-visible"
+        aria-hidden
+      >
         <div id={pdfSourceId}>
-          <ResultSlipDocument order={order} patient={patient} store={store} />
+          <ResultSlipDocument
+            order={order}
+            patient={patient}
+            store={store}
+            onReady={handleSlipReady}
+          />
         </div>
       </div>
     </div>

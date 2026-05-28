@@ -12,11 +12,8 @@ export async function buildResultSlipPdfBlob({
   marginMm = 8,
 }: BuildResultSlipPdfOptions): Promise<Blob> {
   const html2canvas = (await import("html2canvas")).default;
-  const width = Math.max(element.scrollWidth, element.clientWidth);
-  const height = Math.max(element.scrollHeight, element.clientHeight);
-  if (!width || !height) {
-    throw new Error("Result slip element has no measurable size.");
-  }
+  const width = Math.max(element.scrollWidth, element.offsetWidth, 794);
+  const height = Math.max(element.scrollHeight, element.offsetHeight, 1123);
 
   const host = document.createElement("div");
   host.style.position = "fixed";
