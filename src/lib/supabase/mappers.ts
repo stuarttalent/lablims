@@ -256,6 +256,7 @@ export function mapSettings(
     fhir_organization_id: string | null;
     lims_instance_id: string;
     logo_data_url: string | null;
+    letterhead_a4_pdf_data_url: string | null;
     price_overrides: Record<string, number>;
     catalogue_overrides: LabSettings["catalogueOverrides"];
     store_version: number;
@@ -276,6 +277,7 @@ export function mapSettings(
     fhirOrganizationId: row.fhir_organization_id ?? undefined,
     limsInstanceId: row.lims_instance_id,
     logoDataUrl: row.logo_data_url ?? undefined,
+    letterheadA4PdfDataUrl: row.letterhead_a4_pdf_data_url ?? undefined,
     priceOverrides: row.price_overrides ?? {},
     catalogueOverrides: row.catalogue_overrides ?? {},
   };

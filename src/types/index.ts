@@ -223,6 +223,8 @@ export interface LabSettings {
   limsInstanceId?: string;
   /** Optional logo for reports (data URL, e.g. PNG). */
   logoDataUrl?: string;
+  /** Optional A4 PDF letterhead used on results/invoices. */
+  letterheadA4PdfDataUrl?: string;
   /** Per-test rules: age/gender reference bands & default comment templates. */
   catalogueOverrides: Record<string, CatalogueTestOverride>;
 }

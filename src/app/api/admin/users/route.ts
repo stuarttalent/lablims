@@ -26,20 +26,32 @@ export async function GET() {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  const supabase = await createSupabaseServerClient();
-  let query = supabase
+  const server = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+  const client = auth.ctx.role === "super_admin" && admin ? admin : server;
+
+  let query = client
     .from("profiles")
     .select(
-      "id, email, full_name, role, professional_credential, created_at, suspended_at, laboratory_id, branch_id, laboratories(name), lab_branches(name)",
+      "id, email, full_name, role, professional_credential, created_at, suspended_at, laboratory_id, branch_id, laboratories(name), lab_branches!profiles_branch_id_fkey(name)",
     )
     .order("full_name");
-  if (auth.ctx.role !== "super_admin") {
-    query = query.eq("laboratory_id", auth.ctx.laboratoryId);
-  }
+  if (auth.ctx.role !== "super_admin") query = query.eq("laboratory_id", auth.ctx.laboratoryId);
+
   const { data, error } = await query;
-  const { data: memberships, error: membershipError } = await supabase
-    .from("profile_branch_memberships")
-    .select("profile_id, branch_id");
+  let membershipQuery = client.from("profile_branch_memberships").select("profile_id, branch_id");
+  if (auth.ctx.role !== "super_admin") {
+    membershipQuery = membershipQuery.in(
+      "branch_id",
+      (
+        await server
+          .from("lab_branches")
+          .select("id")
+          .eq("laboratory_id", auth.ctx.laboratoryId)
+      ).data?.map((b) => b.id) ?? [],
+    );
+  }
+  const { data: memberships, error: membershipError } = await membershipQuery;
 
   if (error || membershipError) {
     return NextResponse.json(

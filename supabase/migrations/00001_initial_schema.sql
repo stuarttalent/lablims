@@ -130,6 +130,7 @@ create table public.lab_settings (
   fhir_organization_id text default 'lab-main',
   lims_instance_id uuid not null default gen_random_uuid(),
   logo_data_url text,
+  letterhead_a4_pdf_data_url text,
   price_overrides jsonb not null default '{}'::jsonb,
   catalogue_overrides jsonb not null default '{}'::jsonb,
   store_version int not null default 1,

@@ -115,10 +115,10 @@ export function ResultSlipDocument({
       />
 
       <div className="p-8 pb-6 print:p-7">
-        {branchLetterheadPdf ? (
+        {branchLetterheadPdf || store.settings.letterheadA4PdfDataUrl ? (
           <div className="mb-4 rounded-xl border border-slate-200 p-2 bg-white">
             <object
-              data={branchLetterheadPdf}
+              data={branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl}
               type="application/pdf"
               className="h-[180px] w-full rounded"
               aria-label="Branch letterhead PDF"

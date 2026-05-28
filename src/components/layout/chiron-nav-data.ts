@@ -45,7 +45,7 @@ export function entryIsSingle(e: ChironNavEntry): e is NavSingleItem {
 export const CHIRON_NAV_TREE: ChironNavEntry[] = [
   {
     id: "ticket-desk",
-    label: "Ticket desk",
+    label: "Laboratory",
     icon: Headset,
     children: [
       { href: "/ticket-desk", label: "Desk home" },

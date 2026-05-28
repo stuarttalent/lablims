@@ -165,6 +165,16 @@ export default function InvoiceDetailPage() {
         id="invoice-print"
         className="rounded-xl border border-border/70 bg-card p-6 shadow-sm print:shadow-none print:border-0"
       >
+        {store.settings.letterheadA4PdfDataUrl ? (
+          <div className="mb-4 rounded border p-2 bg-white">
+            <object
+              data={store.settings.letterheadA4PdfDataUrl}
+              type="application/pdf"
+              className="h-[180px] w-full"
+              aria-label="A4 letterhead"
+            />
+          </div>
+        ) : null}
         <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
           <div>
             <p className="text-lg font-semibold tracking-tight">

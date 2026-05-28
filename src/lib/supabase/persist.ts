@@ -383,6 +383,8 @@ export async function persistSettingsUpdate(
     row.fhir_organization_id = patch.fhirOrganizationId ?? null;
   if (patch.limsInstanceId != null) row.lims_instance_id = patch.limsInstanceId;
   if (patch.logoDataUrl !== undefined) row.logo_data_url = patch.logoDataUrl ?? null;
+  if (patch.letterheadA4PdfDataUrl !== undefined)
+    row.letterhead_a4_pdf_data_url = patch.letterheadA4PdfDataUrl ?? null;
   if (patch.priceOverrides != null) row.price_overrides = patch.priceOverrides;
   if (patch.catalogueOverrides != null)
     row.catalogue_overrides = patch.catalogueOverrides;

@@ -25,6 +25,7 @@ import { useState } from "react";
 import { resolveTestPrice } from "@/lib/pricing";
 
 const LOGO_MAX_BYTES = 1_200_000;
+const LETTERHEAD_A4_MAX_BYTES = 5_000_000;
 
 export default function SettingsPage() {
   const { store, updateSettings, resetDemoData } = useData();
@@ -181,6 +182,64 @@ export default function SettingsPage() {
               >
                 Remove logo
               </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {privileged ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">A4 letterhead (PDF)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Upload a full-page A4 PDF letterhead. It is used on result slips and invoices.
+            </p>
+            <Input
+              type="file"
+              accept="application/pdf"
+              className="max-w-sm cursor-pointer"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                if (file.size > LETTERHEAD_A4_MAX_BYTES) {
+                  toast.error("A4 letterhead PDF is too large (max 5 MB).");
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const dataUrl = reader.result;
+                  if (typeof dataUrl !== "string") return;
+                  updateSettings({ letterheadA4PdfDataUrl: dataUrl });
+                  toast.success("A4 letterhead saved.");
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+            {s.letterheadA4PdfDataUrl ? (
+              <div className="space-y-2">
+                <div className="rounded border p-2 bg-white">
+                  <object
+                    data={s.letterheadA4PdfDataUrl}
+                    type="application/pdf"
+                    className="h-[220px] w-full"
+                    aria-label="A4 letterhead preview"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    updateSettings({ letterheadA4PdfDataUrl: undefined });
+                    toast.message("A4 letterhead removed.");
+                  }}
+                >
+                  Remove A4 letterhead
+                </Button>
+              </div>
             ) : null}
           </CardContent>
         </Card>
