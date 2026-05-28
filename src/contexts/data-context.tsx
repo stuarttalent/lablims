@@ -1,6 +1,7 @@
 "use client";
 
 import { createInitialStore } from "@/data/seed";
+import { getTestById } from "@/data/catalogue";
 import { persistStore, loadStoredStore } from "@/lib/storage";
 import { resolveTestPrice } from "@/lib/pricing";
 import { loadStoreFromSupabase } from "@/lib/supabase/load-store";
@@ -56,6 +57,21 @@ function randomInvoiceNo(): string {
 function syncError(action: string, err: unknown) {
   console.error(`Supabase ${action} failed:`, err);
   toast.error(`Could not save to cloud (${action}).`);
+}
+
+function expandSelectedTestIds(testIds: string[]): string[] {
+  const expanded = new Set<string>();
+  for (const id of testIds) {
+    const test = getTestById(id);
+    if (test?.constituentTestIds?.length) {
+      for (const constituentId of test.constituentTestIds) {
+        expanded.add(constituentId);
+      }
+      continue;
+    }
+    expanded.add(id);
+  }
+  return [...expanded];
 }
 
 type DataContextValue = {
@@ -260,7 +276,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       let order: LabOrder | null = null;
       commit((s) => {
         const id = `ORD-${Date.now().toString().slice(-8)}`;
-        const uniqueTestIds = [...new Set(input.testIds)];
+        const uniqueTestIds = expandSelectedTestIds(input.testIds);
         const tests: OrderTestLine[] = uniqueTestIds.map((testId) => ({
           testId,
           resultStatus: "Draft",
@@ -367,7 +383,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       let inv: Invoice | null = null;
       let createdOrder: LabOrder | null = null;
       commit((s) => {
-        const uniqueTestIds = [...new Set(input.testIds)];
+        const uniqueTestIds = expandSelectedTestIds(input.testIds);
         const effectiveOrderId = input.orderId ?? `ORD-${Date.now().toString().slice(-8)}`;
         if (!input.orderId) {
           createdOrder = {

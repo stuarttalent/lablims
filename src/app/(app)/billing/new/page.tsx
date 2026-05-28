@@ -1,6 +1,6 @@
 "use client";
 
-import { testsForOrderPicker } from "@/data/catalogue";
+import { getTestById, testsForOrderPicker } from "@/data/catalogue";
 import { useData } from "@/contexts/data-context";
 import { resolveTestPrice } from "@/lib/pricing";
 import type { TestDepartment } from "@/types";
@@ -74,7 +74,8 @@ export default function NewInvoicePage() {
   const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
 
   const preview = useMemo(() => {
-    const sub = selectedIds.reduce(
+    const expandedIds = [...new Set(selectedIds.flatMap((id) => getTestById(id)?.constituentTestIds ?? [id]))];
+    const sub = expandedIds.reduce(
       (s, id) => s + resolveTestPrice(id, store.settings),
       0,
     );

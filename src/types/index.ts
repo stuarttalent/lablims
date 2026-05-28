@@ -41,6 +41,11 @@ export interface CatalogueTest {
    * add these lines via a panel template instead.
    */
   panelAnalyte?: boolean;
+  /**
+   * Optional profile expansion list. When selected, these constituent tests are
+   * added as individual order/result lines.
+   */
+  constituentTestIds?: readonly string[];
 }
 
 /** Gender scope for reference-interval bands (patient gender is normalized to these). */
