@@ -6,6 +6,9 @@ import { SlipExportActions } from "@/components/results/slip-export-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { buildResultSlipPdfBlob } from "@/lib/result-slip-pdf";
+import { toast } from "sonner";
 
 export default function ResultSlipPage() {
   const params = useParams<{ orderId: string }>();
@@ -13,23 +16,91 @@ export default function ResultSlipPage() {
   const order = store.orders.find((o) => o.id === params.orderId);
   if (!order) notFound();
   const patient = store.patients.find((p) => p.id === order.patientId);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const pdfSourceId = useMemo(() => `lablims-result-slip-source-${order.id}`, [order.id]);
+
+  async function regeneratePdfPreview() {
+    const source = document.getElementById(pdfSourceId);
+    if (!source) return null;
+    setIsGeneratingPdf(true);
+    try {
+      const blob = await buildResultSlipPdfBlob({ element: source });
+      const nextUrl = URL.createObjectURL(blob);
+      setPdfBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return nextUrl;
+      });
+      return nextUrl;
+    } catch {
+      toast.error("Could not generate PDF preview.");
+      return null;
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void regeneratePdfPreview();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [pdfSourceId, order.createdAt, order.tests, store.settings.letterheadA4PdfDataUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    };
+  }, [pdfBlobUrl]);
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-5xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-2 no-print">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Result slip</h1>
           <p className="text-sm text-muted-foreground font-mono">{order.id}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <SlipExportActions orderId={order.id} />
+          <SlipExportActions
+            orderId={order.id}
+            elementId={pdfSourceId}
+            pdfBlobUrl={pdfBlobUrl}
+            onBeforeExport={regeneratePdfPreview}
+          />
+          <Button
+            variant="outline"
+            onClick={() => {
+              void regeneratePdfPreview();
+            }}
+            disabled={isGeneratingPdf}
+          >
+            {isGeneratingPdf ? "Refreshing PDF…" : "Refresh PDF preview"}
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/results/${order.id}`}>Workspace</Link>
           </Button>
         </div>
       </div>
 
-      <ResultSlipDocument order={order} patient={patient} store={store} />
+      <div className="rounded-xl border bg-card p-3">
+        {pdfBlobUrl ? (
+          <iframe
+            title={`Result slip ${order.id}`}
+            src={pdfBlobUrl}
+            className="w-full min-h-[80vh] rounded-lg"
+          />
+        ) : (
+          <div className="min-h-[40vh] grid place-items-center text-sm text-muted-foreground">
+            {isGeneratingPdf ? "Generating A4 PDF preview…" : "PDF preview not ready."}
+          </div>
+        )}
+      </div>
+
+      <div className="fixed -left-[10000px] top-0 w-[210mm] pointer-events-none opacity-0">
+        <div id={pdfSourceId}>
+          <ResultSlipDocument order={order} patient={patient} store={store} />
+        </div>
+      </div>
     </div>
   );
 }
