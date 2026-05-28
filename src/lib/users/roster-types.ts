@@ -5,6 +5,11 @@ export type LabStaffMember = {
   email: string;
   fullName: string;
   role: UserRole;
+  laboratoryId?: string;
+  laboratoryName?: string;
+  branchId?: string;
+  branchName?: string;
+  suspendedAt?: string;
   professionalCredential?: string;
   createdAt?: string;
 };

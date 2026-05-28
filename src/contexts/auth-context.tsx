@@ -48,6 +48,10 @@ async function loadUserFromSession(): Promise<{
 
   let profile = await fetchProfileForUser(session.user.id);
   if (!profile) return { user: null, laboratoryId: null };
+  if (profile.suspended_at) {
+    await supabase.auth.signOut();
+    return { user: null, laboratoryId: null };
+  }
 
   const laboratoryId = await ensureLaboratoryForUser(session.user.id);
   profile = (await fetchProfileForUser(session.user.id)) ?? profile;

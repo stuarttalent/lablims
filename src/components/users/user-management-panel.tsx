@@ -41,6 +41,7 @@ import {
   updateLocalStaff,
 } from "@/lib/users/local-roster";
 import {
+  ASSIGNABLE_ROLES,
   SUPER_ADMIN_ASSIGNABLE_ROLES,
   type LabStaffMember,
 } from "@/lib/users/roster-types";
@@ -91,6 +92,8 @@ export function UserManagementPanel() {
   const [labName, setLabName] = useState("");
   const [labSlug, setLabSlug] = useState("");
   const [branchName, setBranchName] = useState("");
+  const assignableRoles =
+    user?.role === "super_admin" ? SUPER_ADMIN_ASSIGNABLE_ROLES : ASSIGNABLE_ROLES;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -298,7 +301,7 @@ export function UserManagementPanel() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SUPER_ADMIN_ASSIGNABLE_ROLES.map((r) => (
+                    {assignableRoles.map((r) => (
                       <SelectItem key={r} value={r}>
                         {ROLE_LABELS[r]}
                       </SelectItem>
@@ -467,7 +470,7 @@ export function UserManagementPanel() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {SUPER_ADMIN_ASSIGNABLE_ROLES.map((r) => (
+                            {assignableRoles.map((r) => (
                               <SelectItem key={r} value={r}>
                                 {ROLE_LABELS[r]}
                               </SelectItem>

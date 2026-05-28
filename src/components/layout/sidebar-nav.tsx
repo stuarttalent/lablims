@@ -129,8 +129,8 @@ export function SidebarNav({ role }: { role: UserRole }) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => {
-                  logout();
+                onClick={async () => {
+                  await logout();
                   router.push("/login");
                 }}
               >

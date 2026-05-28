@@ -80,7 +80,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {user.email}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => logout()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    await logout();
+                    router.push("/login");
+                  }}
+                >
                   <LogOut className="size-4" />
                   <span className="hidden sm:inline">Sign out</span>
                 </Button>

@@ -97,6 +97,7 @@ create table public.profiles (
   email text not null,
   full_name text not null,
   role user_role not null default 'tech',
+  suspended_at timestamptz,
   professional_credential text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

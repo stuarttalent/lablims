@@ -27,11 +27,16 @@ export async function GET() {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("profiles")
-    .select("id, email, full_name, role, professional_credential, created_at")
-    .eq("laboratory_id", auth.ctx.laboratoryId)
+    .select(
+      "id, email, full_name, role, professional_credential, created_at, suspended_at, laboratory_id, branch_id, laboratories(name), lab_branches(name)",
+    )
     .order("full_name");
+  if (auth.ctx.role !== "super_admin") {
+    query = query.eq("laboratory_id", auth.ctx.laboratoryId);
+  }
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,6 +48,17 @@ export async function GET() {
       email: row.email,
       fullName: row.full_name,
       role: row.role,
+      laboratoryId: row.laboratory_id,
+      laboratoryName:
+        row.laboratories && typeof row.laboratories === "object"
+          ? (row.laboratories as { name?: string }).name
+          : undefined,
+      branchId: row.branch_id ?? undefined,
+      branchName:
+        row.lab_branches && typeof row.lab_branches === "object"
+          ? (row.lab_branches as { name?: string }).name
+          : undefined,
+      suspendedAt: row.suspended_at ?? undefined,
       professionalCredential: row.professional_credential ?? undefined,
       createdAt: row.created_at,
     })),

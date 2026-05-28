@@ -1,3 +1,4 @@
+import { requireLabAdmin } from "@/lib/admin/require-lab-admin";
 import { requireSuperAdmin } from "@/lib/admin/require-super-admin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
@@ -5,7 +6,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const auth = await requireSuperAdmin();
+  const auth = await requireLabAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
@@ -42,8 +43,13 @@ export async function GET() {
     return NextResponse.json({ error: managerError.message }, { status: 500 });
   }
 
+  const filteredLabs =
+    auth.ctx.role === "super_admin"
+      ? labs ?? []
+      : (labs ?? []).filter((lab) => lab.id === auth.ctx.laboratoryId);
+
   return NextResponse.json({
-    laboratories: (labs ?? []).map((lab) => ({
+    laboratories: filteredLabs.map((lab) => ({
       id: lab.id,
       slug: lab.slug,
       name: lab.name,
