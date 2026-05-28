@@ -225,8 +225,6 @@ export interface LabSettings {
   logoDataUrl?: string;
   /** Optional A4 PDF letterhead used on results/invoices. */
   letterheadA4PdfDataUrl?: string;
-  /** Result slip rendering mode: lab profile header or full letterhead background. */
-  resultSlipTemplateMode?: "profile" | "letterhead";
   /** Per-test rules: age/gender reference bands & default comment templates. */
   catalogueOverrides: Record<string, CatalogueTestOverride>;
 }

@@ -414,14 +414,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
       const ctx = supabaseCtxRef.current;
       if (ctx && inv) {
-        if (createdOrder) {
-          void persistOrderInsert(ctx, createdOrder).catch((e) =>
-            syncError("add order from invoice", e),
-          );
-        }
-        void persistInvoiceInsert(ctx, inv).catch((e) =>
-          syncError("add invoice", e),
-        );
+        void (async () => {
+          try {
+            if (createdOrder) {
+              await persistOrderInsert(ctx, createdOrder);
+            }
+            await persistInvoiceInsert(ctx, inv);
+          } catch (e) {
+            syncError("add invoice", e);
+          }
+        })();
       }
       return inv!;
     },

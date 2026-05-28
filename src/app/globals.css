@@ -146,21 +146,4 @@
   body {
     background: white !important;
   }
-  .preview-a4-flow {
-    height: auto !important;
-    columns: auto !important;
-    column-gap: 0 !important;
-  }
-}
-
-@media screen {
-  .preview-a4-flow {
-    height: 297mm;
-    columns: 210mm;
-    column-gap: 12mm;
-    column-fill: auto;
-  }
-  .preview-a4-flow > * {
-    break-inside: avoid-column;
-  }
 }

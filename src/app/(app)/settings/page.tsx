@@ -13,13 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -52,9 +45,6 @@ export default function SettingsPage() {
   const [fhirOrganizationId, setFhirOrganizationId] = useState(
     s.fhirOrganizationId ?? "",
   );
-  const [resultSlipTemplateMode, setResultSlipTemplateMode] = useState<
-    "profile" | "letterhead"
-  >(s.resultSlipTemplateMode ?? "profile");
 
   function saveProfile() {
     const departments = deptText
@@ -74,7 +64,6 @@ export default function SettingsPage() {
         ? {
             fhirBaseUrl: fhirBaseUrl.trim() || undefined,
             fhirOrganizationId: fhirOrganizationId.trim() || undefined,
-            resultSlipTemplateMode,
           }
         : {}),
     });
@@ -132,37 +121,6 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {privileged ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Result slip template mode</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Label>Choose result slip style</Label>
-            <Select
-              value={resultSlipTemplateMode}
-              onValueChange={(v) =>
-                v &&
-                setResultSlipTemplateMode(v as "profile" | "letterhead")
-              }
-            >
-              <SelectTrigger className="max-w-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="profile">Use lab profile header</SelectItem>
-                <SelectItem value="letterhead">
-                  Use A4 letterhead background
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="secondary" size="sm" onClick={saveProfile}>
-              Save slip template mode
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
 
       {privileged ? (
         <Card>

@@ -101,11 +101,8 @@ export function ResultSlipDocument({
   const released =
     order.status === "Released" ||
     order.tests.some((l) => l.resultStatus === "Released");
-  const useLetterheadMode =
-    (store.settings.resultSlipTemplateMode ?? "profile") === "letterhead";
-  const letterheadPdfUrl = useLetterheadMode
-    ? (branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl ?? null)
-    : null;
+  const letterheadPdfUrl =
+    branchLetterheadPdf ?? store.settings.letterheadA4PdfDataUrl ?? null;
   const hasA4Letterhead = Boolean(letterheadPdfUrl);
 
   const attributionRows = uniqueAttributionRows(order.tests);
@@ -113,8 +110,7 @@ export function ResultSlipDocument({
   return (
     <div
       id="lablims-result-slip"
-      style={{ fontSize: "12pt" }}
-      className={`relative rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg w-[210mm] min-h-[297mm] mx-auto print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:w-[210mm] print:min-h-[297mm] print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
+      className={`relative rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:w-[210mm] print:min-h-[297mm] print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
     >
       {hasA4Letterhead ? (
         <div className="pointer-events-none absolute inset-0 z-0">
@@ -132,7 +128,7 @@ export function ResultSlipDocument({
         aria-hidden
       />
 
-      <div className="relative z-10 p-8 pb-6 print:p-7 preview-a4-flow">
+      <div className="relative z-10 p-8 pb-6 print:p-7">
         <header className="flex flex-col gap-6 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:border-slate-300">
           {!hasA4Letterhead ? (
             <div className="flex flex-1 flex-wrap items-start gap-5">
