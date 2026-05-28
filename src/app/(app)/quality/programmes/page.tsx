@@ -31,6 +31,8 @@ type QCEntry = {
   date: string;
   qcType: QCType;
   programme: string;
+  organization?: string;
+  frequency?: string;
   analyte: string;
   target: number;
   result: number;
@@ -44,18 +46,55 @@ type QCFormState = {
   result: string;
 };
 
+type EQCProgramme = {
+  id: string;
+  name: string;
+  organization: string;
+  frequency: string;
+  tests: string[];
+};
+
 const DEFAULT_PROGRAMMES: Record<QCType, string[]> = {
   IQC: ["Chemistry L1", "Chemistry L2", "Haematology Low", "Haematology High"],
-  EQC: ["UK NEQAS", "RIQAS", "AfriLab EQA"],
+  EQC: ["UK NEQAS - Core Chemistry", "RIQAS - Lipids", "AfriLab EQA - Serology"],
 };
 
 const DEFAULT_ANALYTES = ["Glucose", "Creatinine", "ALT", "Hb", "WBC"];
+const DEFAULT_EQC_FREQUENCIES = ["Monthly", "Quarterly", "Bi-annual", "Annual"];
+
+const INITIAL_EQC_PROGRAMMES: EQCProgramme[] = [
+  {
+    id: "eqc-1",
+    name: "UK NEQAS - Core Chemistry",
+    organization: "UK NEQAS",
+    frequency: "Quarterly",
+    tests: ["Glucose", "Creatinine", "ALT"],
+  },
+  {
+    id: "eqc-2",
+    name: "RIQAS - Lipids",
+    organization: "Randox RIQAS",
+    frequency: "Monthly",
+    tests: ["Cholesterol", "HDL", "LDL"],
+  },
+];
 
 const INITIAL_ENTRIES: QCEntry[] = [
   { id: "qc-1", date: "2026-05-24", qcType: "IQC", programme: "Chemistry L1", analyte: "Glucose", target: 5.5, result: 5.4 },
   { id: "qc-2", date: "2026-05-25", qcType: "IQC", programme: "Chemistry L1", analyte: "Glucose", target: 5.5, result: 5.7 },
   { id: "qc-3", date: "2026-05-26", qcType: "IQC", programme: "Chemistry L1", analyte: "Glucose", target: 5.5, result: 5.3 },
   { id: "qc-4", date: "2026-05-27", qcType: "IQC", programme: "Chemistry L1", analyte: "Glucose", target: 5.5, result: 5.9 },
+  {
+    id: "qc-5",
+    date: "2026-05-27",
+    qcType: "EQC",
+    programme: "UK NEQAS - Core Chemistry",
+    organization: "UK NEQAS",
+    frequency: "Quarterly",
+    analyte: "Glucose",
+    target: 5.6,
+    result: 5.8,
+  },
 ];
 
 function standardDeviation(values: number[]): number {
@@ -75,6 +114,9 @@ function ljStatus(delta: number, sd: number): string {
 export default function QualityProgrammesPage() {
   const [activeType, setActiveType] = useState<QCType>("IQC");
   const [entries, setEntries] = useState<QCEntry[]>(INITIAL_ENTRIES);
+  const [eqcProgrammes, setEqcProgrammes] = useState<EQCProgramme[]>(
+    INITIAL_EQC_PROGRAMMES,
+  );
   const [form, setForm] = useState<QCFormState>({
     date: format(new Date(), "yyyy-MM-dd"),
     programme: DEFAULT_PROGRAMMES.IQC[0],
@@ -82,6 +124,17 @@ export default function QualityProgrammesPage() {
     target: "",
     result: "",
   });
+  const [eqcForm, setEqcForm] = useState({
+    organization: "",
+    frequency: DEFAULT_EQC_FREQUENCIES[0],
+    tests: "",
+  });
+
+  const programmeOptions = useMemo(() => {
+    if (activeType === "IQC") return DEFAULT_PROGRAMMES.IQC;
+    const dynamic = eqcProgrammes.map((p) => p.name);
+    return dynamic.length > 0 ? dynamic : DEFAULT_PROGRAMMES.EQC;
+  }, [activeType, eqcProgrammes]);
 
   const visibleEntries = useMemo(() => {
     return entries
@@ -125,8 +178,47 @@ export default function QualityProgrammesPage() {
     setActiveType(next);
     setForm((prev) => ({
       ...prev,
-      programme: DEFAULT_PROGRAMMES[next][0],
+      programme:
+        next === "IQC"
+          ? DEFAULT_PROGRAMMES.IQC[0]
+          : (eqcProgrammes[0]?.name ?? DEFAULT_PROGRAMMES.EQC[0]),
     }));
+  }
+
+  function addEqcProgramme() {
+    const organization = eqcForm.organization.trim();
+    const tests = eqcForm.tests
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (!organization) {
+      toast.error("EQC organization is required.");
+      return;
+    }
+    if (tests.length === 0) {
+      toast.error("Add at least one EQC test.");
+      return;
+    }
+    const name = `${organization} - ${tests[0]} panel`;
+    if (eqcProgrammes.some((p) => p.name === name)) {
+      toast.error("This EQC programme already exists.");
+      return;
+    }
+    const nextProgramme: EQCProgramme = {
+      id: crypto.randomUUID(),
+      name,
+      organization,
+      frequency: eqcForm.frequency,
+      tests,
+    };
+    setEqcProgrammes((prev) => [...prev, nextProgramme]);
+    setEqcForm({
+      organization: "",
+      frequency: DEFAULT_EQC_FREQUENCIES[0],
+      tests: "",
+    });
+    setForm((prev) => ({ ...prev, programme: nextProgramme.name }));
+    toast.success("EQC programme added.");
   }
 
   function addEntry() {
@@ -145,6 +237,14 @@ export default function QualityProgrammesPage() {
       date: form.date,
       qcType: activeType,
       programme: form.programme,
+      organization:
+        activeType === "EQC"
+          ? eqcProgrammes.find((p) => p.name === form.programme)?.organization
+          : undefined,
+      frequency:
+        activeType === "EQC"
+          ? eqcProgrammes.find((p) => p.name === form.programme)?.frequency
+          : undefined,
       analyte: form.analyte,
       target,
       result,
@@ -205,7 +305,7 @@ export default function QualityProgrammesPage() {
                 <SelectValue placeholder="Programme" />
               </SelectTrigger>
               <SelectContent>
-                {DEFAULT_PROGRAMMES[activeType].map((p) => (
+                {programmeOptions.map((p) => (
                   <SelectItem key={p} value={p}>
                     {p}
                   </SelectItem>
@@ -260,6 +360,62 @@ export default function QualityProgrammesPage() {
         </CardContent>
       </Card>
 
+      {activeType === "EQC" ? (
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Add EQC programme</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <Label>Organization</Label>
+              <Input
+                placeholder="e.g. UK NEQAS"
+                value={eqcForm.organization}
+                onChange={(e) =>
+                  setEqcForm((prev) => ({ ...prev, organization: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Frequency</Label>
+              <Select
+                value={eqcForm.frequency}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setEqcForm((prev) => ({ ...prev, frequency: v }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEFAULT_EQC_FREQUENCIES.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 lg:col-span-2">
+              <Label>Tests</Label>
+              <Input
+                placeholder="Comma separated tests e.g. Glucose, Creatinine, ALT"
+                value={eqcForm.tests}
+                onChange={(e) =>
+                  setEqcForm((prev) => ({ ...prev, tests: e.target.value }))
+                }
+              />
+            </div>
+            <div className="flex items-end lg:col-span-4">
+              <Button type="button" onClick={addEqcProgramme}>
+                Add EQC programme
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="border-border/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Levey-Jennings chart</CardTitle>
@@ -304,6 +460,8 @@ export default function QualityProgrammesPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Programme</TableHead>
+                  {activeType === "EQC" ? <TableHead>Organization</TableHead> : null}
+                  {activeType === "EQC" ? <TableHead>Frequency</TableHead> : null}
                   <TableHead>Analyte</TableHead>
                   <TableHead className="text-right">Target</TableHead>
                   <TableHead className="text-right">Result</TableHead>
@@ -314,7 +472,10 @@ export default function QualityProgrammesPage() {
               <TableBody>
                 {visibleEntries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={activeType === "EQC" ? 9 : 7}
+                      className="text-center text-muted-foreground"
+                    >
                       No {activeType} entries yet.
                     </TableCell>
                   </TableRow>
@@ -329,6 +490,12 @@ export default function QualityProgrammesPage() {
                       <TableRow key={row.id}>
                         <TableCell>{row.date}</TableCell>
                         <TableCell>{row.programme}</TableCell>
+                        {activeType === "EQC" ? (
+                          <TableCell>{row.organization ?? "-"}</TableCell>
+                        ) : null}
+                        {activeType === "EQC" ? (
+                          <TableCell>{row.frequency ?? "-"}</TableCell>
+                        ) : null}
                         <TableCell>{row.analyte}</TableCell>
                         <TableCell className="text-right">{row.target.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{row.result.toFixed(2)}</TableCell>

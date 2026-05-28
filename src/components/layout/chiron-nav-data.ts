@@ -1,9 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeftRight,
-  BadgeCheck,
   ClipboardList,
-  Droplets,
   Eye,
   FileStack,
   Headset,
@@ -109,18 +107,6 @@ export const CHIRON_NAV_TREE: ChironNavEntry[] = [
     label: "Quality programmes",
     icon: ShieldCheck,
     children: [{ href: "/quality/programmes", label: "Programmes" }],
-  },
-  {
-    id: "quality-instruments",
-    label: "Quality instruments",
-    icon: BadgeCheck,
-    children: [{ href: "/quality/instruments", label: "Instrumentation" }],
-  },
-  {
-    id: "quality-stains",
-    label: "Quality stains",
-    icon: Droplets,
-    children: [{ href: "/quality/stains", label: "Stains & reagents" }],
   },
   {
     id: "reports",

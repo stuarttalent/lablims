@@ -521,7 +521,7 @@ export default function DashboardPage() {
         <CardContent className="py-4 text-sm flex flex-wrap items-center gap-2">
           <span className="text-muted-foreground">Control data</span>
           <Button asChild variant="link" className="h-auto p-0 text-primary">
-            <Link href="/quality/instruments">Click here</Link>
+            <Link href="/quality/programmes">Click here</Link>
           </Button>
           <span className="text-muted-foreground">to review QC recommendations.</span>
         </CardContent>
