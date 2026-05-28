@@ -52,7 +52,9 @@ create type payment_method as enum (
   'EcoCash',
   'Swipe',
   'Bank Transfer',
-  'Medical Aid'
+  'Medical Aid',
+  'Corporate accounts',
+  'Staff'
 );
 
 create type payment_status as enum ('Paid', 'Partially Paid', 'Unpaid');

@@ -103,6 +103,8 @@ export default function InvoiceDetailPage() {
                 <SelectItem value="Swipe">Swipe</SelectItem>
                 <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                 <SelectItem value="Medical Aid">Medical Aid</SelectItem>
+                <SelectItem value="Corporate accounts">Corporate accounts</SelectItem>
+                <SelectItem value="Staff">Staff</SelectItem>
               </SelectContent>
             </Select>
           </div>

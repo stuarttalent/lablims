@@ -163,7 +163,9 @@ export type PaymentMethod =
   | "EcoCash"
   | "Swipe"
   | "Bank Transfer"
-  | "Medical Aid";
+  | "Medical Aid"
+  | "Corporate accounts"
+  | "Staff";
 
 export type PaymentStatus = "Paid" | "Partially Paid" | "Unpaid";
 
