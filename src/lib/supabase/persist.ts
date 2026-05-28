@@ -23,6 +23,14 @@ export type SupabaseContext = {
   orderUuid: Map<string, string>;
 };
 
+function hasMissingBranchColumn(error: unknown): boolean {
+  const msg =
+    typeof error === "object" && error && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+  return /branch_id/i.test(msg) && /(column|does not exist|schema cache)/i.test(msg);
+}
+
 async function resolvePatientUuid(
   ctx: SupabaseContext,
   appPatientId: string,
@@ -111,7 +119,31 @@ export async function persistPatientInsert(
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (!hasMissingBranchColumn(error)) throw error;
+    const fallback = await supabase
+      .from("patients")
+      .insert({
+        laboratory_id: ctx.laboratoryId,
+        legacy_id: patient.id,
+        full_name: patient.fullName,
+        date_of_birth: patient.dateOfBirth,
+        age: patient.age,
+        gender: patient.gender,
+        phone: patient.phone,
+        email: patient.email,
+        address: patient.address,
+        referring_doctor: patient.referringDoctor,
+        medical_aid: patient.medicalAid,
+        clinical_symptoms: patient.clinicalSymptoms ?? null,
+        clinical_history: patient.clinicalHistory ?? null,
+      })
+      .select("id")
+      .single();
+    if (fallback.error) throw fallback.error;
+    ctx.patientUuid.set(patient.id, fallback.data.id);
+    return;
+  }
   ctx.patientUuid.set(patient.id, data.id);
 }
 
@@ -133,12 +165,21 @@ export async function persistPatientUpdate(
   if (patch.address != null) row.address = patch.address;
   if (patch.referringDoctor != null) row.referring_doctor = patch.referringDoctor;
   if (patch.medicalAid != null) row.medical_aid = patch.medicalAid;
+  if (patch.branchId !== undefined) row.branch_id = patch.branchId ?? null;
   if (patch.clinicalSymptoms !== undefined)
     row.clinical_symptoms = patch.clinicalSymptoms ?? null;
   if (patch.clinicalHistory !== undefined)
     row.clinical_history = patch.clinicalHistory ?? null;
   const { error } = await supabase.from("patients").update(row).eq("id", uuid);
-  if (error) throw error;
+  if (error) {
+    if (!hasMissingBranchColumn(error)) throw error;
+    delete row.branch_id;
+    const { error: fallbackError } = await supabase
+      .from("patients")
+      .update(row)
+      .eq("id", uuid);
+    if (fallbackError) throw fallbackError;
+  }
 }
 
 export async function persistOrderInsert(
@@ -172,7 +213,39 @@ export async function persistOrderInsert(
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (!hasMissingBranchColumn(error)) throw error;
+    const fallback = await supabase
+      .from("lab_orders")
+      .insert({
+        laboratory_id: ctx.laboratoryId,
+        legacy_id: order.id,
+        patient_id: patientUuid,
+        sample_type: order.sampleType,
+        priority: order.priority,
+        requesting_doctor: order.requestingDoctor,
+        collection_date: order.collectionDate,
+        status: order.status,
+        notes: order.notes ?? null,
+        clinical_symptoms: order.clinicalSymptoms ?? null,
+        ai_generated_comment: order.aiGeneratedComment ?? null,
+        ai_clinical_guidance: order.aiClinicalGuidance ?? null,
+        include_ai_comment_in_report: order.includeAiCommentInReport ?? false,
+        assigned_tech_id: resolveProfileUuid(ctx, order.assignedTechId),
+        assigned_scientist_id: resolveProfileUuid(ctx, order.assignedScientistId),
+      })
+      .select("id")
+      .single();
+    if (fallback.error) throw fallback.error;
+    ctx.orderUuid.set(order.id, fallback.data.id);
+    if (order.tests.length > 0) {
+      const { error: lineErr } = await supabase.from("order_test_lines").insert(
+        order.tests.map((t, i) => lineRow(ctx, fallback.data.id, t, i)),
+      );
+      if (lineErr) throw lineErr;
+    }
+    return;
+  }
   ctx.orderUuid.set(order.id, data.id);
 
   if (order.tests.length > 0) {
@@ -239,7 +312,15 @@ export async function persistOrderUpdate(
   if (patch.branchId !== undefined) row.branch_id = patch.branchId ?? null;
   if (Object.keys(row).length > 0) {
     const { error } = await supabase.from("lab_orders").update(row).eq("id", uuid);
-    if (error) throw error;
+    if (error) {
+      if (!hasMissingBranchColumn(error)) throw error;
+      delete row.branch_id;
+      const { error: fallbackError } = await supabase
+        .from("lab_orders")
+        .update(row)
+        .eq("id", uuid);
+      if (fallbackError) throw fallbackError;
+    }
   }
   if (patch.tests) {
     await supabase.from("order_test_lines").delete().eq("order_id", uuid);
@@ -331,7 +412,27 @@ export async function persistInvoiceInsert(
     receipt_number: invoice.receiptNumber ?? null,
     medical_aid_details: invoice.medicalAidDetails ?? null,
   });
-  if (error) throw error;
+  if (error) {
+    if (!hasMissingBranchColumn(error)) throw error;
+    const { error: fallbackError } = await supabase.from("invoices").insert({
+      laboratory_id: ctx.laboratoryId,
+      legacy_id: invoice.id,
+      invoice_number: invoice.invoiceNumber,
+      patient_id: patientUuid,
+      order_id: orderUuid,
+      test_ids: invoice.testIds,
+      subtotal: invoice.subtotal,
+      discount: invoice.discount,
+      tax: invoice.tax,
+      total: invoice.total,
+      currency_code: invoice.currency,
+      payment_method: invoice.paymentMethod ?? null,
+      payment_status: invoice.paymentStatus,
+      receipt_number: invoice.receiptNumber ?? null,
+      medical_aid_details: invoice.medicalAidDetails ?? null,
+    });
+    if (fallbackError) throw fallbackError;
+  }
 }
 
 export async function persistInvoiceUpdate(
@@ -361,7 +462,15 @@ export async function persistInvoiceUpdate(
   if (patch.medicalAidDetails !== undefined)
     row.medical_aid_details = patch.medicalAidDetails ?? null;
   const { error } = await supabase.from("invoices").update(row).eq("id", data.id);
-  if (error) throw error;
+  if (error) {
+    if (!hasMissingBranchColumn(error)) throw error;
+    delete row.branch_id;
+    const { error: fallbackError } = await supabase
+      .from("invoices")
+      .update(row)
+      .eq("id", data.id);
+    if (fallbackError) throw fallbackError;
+  }
 }
 
 export async function persistSettingsUpdate(

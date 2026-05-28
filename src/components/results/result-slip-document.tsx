@@ -110,7 +110,7 @@ export function ResultSlipDocument({
   return (
     <div
       id="lablims-result-slip"
-      className={`relative overflow-hidden rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
+      className={`relative rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:w-[210mm] print:min-h-[297mm] print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
     >
       {hasA4Letterhead ? (
         <div className="pointer-events-none absolute inset-0 z-0">
@@ -206,7 +206,7 @@ export function ResultSlipDocument({
           </div>
         </header>
 
-        <section className="mt-6 grid gap-4 rounded-xl border border-slate-100 bg-slate-50/40 p-4 sm:grid-cols-2 print:border-slate-400 print:bg-white">
+        <section className="mt-6 grid gap-4 rounded-xl border border-slate-100 bg-slate-50/40 p-4 sm:grid-cols-2 print:break-inside-avoid print:border-slate-400 print:bg-white">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-teal-800 print:text-slate-800">
               Patient
@@ -248,7 +248,7 @@ export function ResultSlipDocument({
             const lines = grouped.get(dep) ?? [];
             if (lines.length === 0) return null;
             return (
-              <div key={dep}>
+              <div key={dep} className="print:break-inside-avoid-page">
                 <div className="flex items-center gap-2">
                   <span className="h-px flex-1 bg-gradient-to-r from-teal-600/50 to-transparent print:bg-slate-400 print:[background-image:none]" />
                   <h2 className="shrink-0 text-xs font-bold uppercase tracking-[0.15em] text-teal-900 print:text-slate-900">
@@ -337,7 +337,7 @@ export function ResultSlipDocument({
           })}
         </div>
 
-        <section className="mt-8 overflow-hidden rounded-xl border border-teal-100 bg-gradient-to-b from-white to-teal-50/30 shadow-sm print:border-2 print:border-slate-400 print:bg-white print:from-white print:to-white print:shadow-none">
+        <section className="mt-8 overflow-hidden rounded-xl border border-teal-100 bg-gradient-to-b from-white to-teal-50/30 shadow-sm print:break-inside-avoid print:border-2 print:border-slate-400 print:bg-white print:from-white print:to-white print:shadow-none">
           <div className="border-b border-teal-100 bg-teal-900/95 px-4 py-2 print:border-slate-600 print:bg-slate-800 print:text-white print:[background-image:none]">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-white">
               Result entry &amp; authorization
