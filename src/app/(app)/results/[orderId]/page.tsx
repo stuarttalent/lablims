@@ -116,6 +116,12 @@ function inferFlagFromResultRange(
   return undefined;
 }
 
+function toNum(v?: string): number | null {
+  if (!v) return null;
+  const n = Number.parseFloat(v.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
 function lineStatusLabel(s: LineResultStatus | undefined): string {
   if (s === "Pending Verification") return "Pending authorization";
   return s ?? "Draft";
@@ -220,6 +226,67 @@ export default function ResultsWorkspacePage() {
       return;
     }
     updateOrderLine(order.id, line.testId, nextPatch);
+
+    // Auto-calculate common derived parameters for real-world use.
+    if (
+      nextPatch.resultValue !== undefined ||
+      line.testId === "t-lipid-total" ||
+      line.testId === "t-lipid-hdl" ||
+      line.testId === "t-lipid-tg" ||
+      line.testId === "t-lft-total-protein" ||
+      line.testId === "t-lft-albumin"
+    ) {
+      const valueByTest = new Map(
+        order.tests.map((t) => [t.testId, t.resultValue ?? ""]),
+      );
+      valueByTest.set(line.testId, nextPatch.resultValue ?? line.resultValue ?? "");
+
+      const totalChol = toNum(valueByTest.get("t-lipid-total"));
+      const hdl = toNum(valueByTest.get("t-lipid-hdl"));
+      const tg = toNum(valueByTest.get("t-lipid-tg"));
+      if (totalChol != null && hdl != null && tg != null) {
+        const ldl = totalChol - hdl - tg / 2.2;
+        if (Number.isFinite(ldl)) {
+          updateOrderLine(order.id, "t-lipid-ldl", {
+            resultValue: ldl.toFixed(2),
+            comment: "Auto-calculated (Friedewald, mmol/L).",
+            flag: inferFlagFromResultRange(
+              ldl.toFixed(2),
+              getTestById("t-lipid-ldl")?.referenceRange,
+            ),
+          });
+        }
+      }
+
+      const tp = toNum(valueByTest.get("t-lft-total-protein"));
+      const alb = toNum(valueByTest.get("t-lft-albumin"));
+      if (tp != null && alb != null) {
+        const glob = tp - alb;
+        if (Number.isFinite(glob)) {
+          const globValue = glob.toFixed(2);
+          updateOrderLine(order.id, "t-lft-globulin-calc", {
+            resultValue: globValue,
+            comment: "Auto-calculated (Total protein - Albumin).",
+            flag: inferFlagFromResultRange(
+              globValue,
+              getTestById("t-lft-globulin-calc")?.referenceRange,
+            ),
+          });
+          if (glob !== 0) {
+            const agr = alb / glob;
+            const agrValue = agr.toFixed(2);
+            updateOrderLine(order.id, "t-lft-ag-ratio-calc", {
+              resultValue: agrValue,
+              comment: "Auto-calculated (Albumin / Globulin).",
+              flag: inferFlagFromResultRange(
+                agrValue,
+                getTestById("t-lft-ag-ratio-calc")?.referenceRange,
+              ),
+            });
+          }
+        }
+      }
+    }
   }
 
   function startAuthorizedEdit(

@@ -34,6 +34,15 @@ export function SlipExportActions({
       toast.error("Report not ready for export.");
       return;
     }
+    const hasPdfLetterhead = el.getAttribute("data-has-pdf-letterhead") === "true";
+    if (hasPdfLetterhead) {
+      window.print();
+      toast.message("Print dialog opened", {
+        description:
+          "Use Save as PDF to preserve the embedded PDF letterhead exactly.",
+      });
+      return;
+    }
 
     const { jsPDF } = await import("jspdf");
 

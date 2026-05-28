@@ -147,3 +147,15 @@
     background: white !important;
   }
 }
+
+#lablims-result-slip {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+}
+
+#lablims-result-slip,
+#lablims-result-slip * {
+  font-size: 12pt !important;
+  line-height: 1.35 !important;
+}

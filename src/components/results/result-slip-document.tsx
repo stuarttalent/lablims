@@ -110,6 +110,7 @@ export function ResultSlipDocument({
   return (
     <div
       id="lablims-result-slip"
+      data-has-pdf-letterhead={hasA4Letterhead ? "true" : "false"}
       className={`relative rounded-2xl border border-slate-200/90 text-slate-900 shadow-lg print:rounded-none print:border-2 print:border-slate-400 print:shadow-none print:w-[210mm] print:min-h-[297mm] print:[print-color-adjust:economy] print:[-webkit-print-color-adjust:economy] ${hasA4Letterhead ? "bg-transparent" : "bg-white"}`}
     >
       {hasA4Letterhead ? (
