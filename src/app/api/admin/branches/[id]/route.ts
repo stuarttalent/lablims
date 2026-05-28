@@ -23,7 +23,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { name?: string; code?: string; address?: string; active?: boolean }
+    | { name?: string; code?: string; address?: string; active?: boolean; letterheadPdfDataUrl?: string }
     | null;
   if (!body) return NextResponse.json({ error: "Invalid body." }, { status: 400 });
   const patch: Record<string, unknown> = {};
@@ -31,6 +31,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (body.code !== undefined) patch.code = body.code.trim() || null;
   if (body.address !== undefined) patch.address = body.address.trim() || null;
   if (body.active !== undefined) patch.active = body.active;
+  if (body.letterheadPdfDataUrl !== undefined) {
+    patch.letterhead_pdf_data_url = body.letterheadPdfDataUrl || null;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "No fields to update." }, { status: 400 });
   }
@@ -40,7 +43,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .from("lab_branches")
     .update(patch)
     .eq("id", id)
-    .select("id, laboratory_id, name, code, address, active")
+    .select("id, laboratory_id, name, code, address, active, letterhead_pdf_data_url")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ branch: data });

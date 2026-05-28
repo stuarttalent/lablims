@@ -70,6 +70,7 @@ export interface CatalogueTestOverride {
 
 export interface Patient {
   id: string;
+  branchId?: string;
   fullName: string;
   dateOfBirth: string;
   age: number;
@@ -88,6 +89,7 @@ export interface Patient {
 
 export interface Doctor {
   id: string;
+  branchId?: string;
   name: string;
   specialty: string;
 }
@@ -138,6 +140,7 @@ export interface OrderTestLine {
 
 export interface LabOrder {
   id: string;
+  branchId?: string;
   patientId: string;
   sampleType: string;
   priority: OrderPriority;
@@ -184,6 +187,7 @@ export interface MedicalAidDetails {
 
 export interface Invoice {
   id: string;
+  branchId?: string;
   invoiceNumber: string;
   patientId: string;
   orderId?: string;

@@ -24,7 +24,7 @@ export async function GET() {
       admin.from("laboratories").select("id, slug, name").order("name"),
       admin
         .from("lab_branches")
-        .select("id, laboratory_id, name, code, address, active")
+        .select("id, laboratory_id, name, code, address, active, letterhead_pdf_data_url")
         .order("name"),
     ]);
 

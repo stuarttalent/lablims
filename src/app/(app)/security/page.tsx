@@ -29,13 +29,21 @@ type Staff = {
   branchId?: string;
   branchName?: string;
   suspendedAt?: string;
+  assignedBranchIds?: string[];
 };
 
 type Lab = {
   id: string;
   slug: string;
   name: string;
-  branches: { id: string; name: string; code?: string | null; address?: string | null; active?: boolean }[];
+  branches: {
+    id: string;
+    name: string;
+    code?: string | null;
+    address?: string | null;
+    active?: boolean;
+    letterhead_pdf_data_url?: string | null;
+  }[];
   managers: { id: string; full_name: string; email: string }[];
 };
 
@@ -46,6 +54,7 @@ export default function SecurityPage() {
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState<Record<string, string>>({});
   const [editRole, setEditRole] = useState<Record<string, UserRole>>({});
+  const [pdfDraftByBranch, setPdfDraftByBranch] = useState<Record<string, string>>({});
 
   const roleOptions = useMemo(() => {
     if (user?.role === "super_admin") {
@@ -133,6 +142,44 @@ export default function SecurityPage() {
     }
   }
 
+  async function assignUserBranches(u: Staff) {
+    const lab = labs.find((l) => l.id === u.laboratoryId);
+    if (!lab) {
+      toast.error("No laboratory found for this user.");
+      return;
+    }
+    const options = lab.branches.map((b) => b.name).join(", ");
+    const initial = (u.assignedBranchIds ?? [])
+      .map((id) => lab.branches.find((b) => b.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+    const input = window.prompt(
+      `Assign branches to ${u.fullName}. Enter comma-separated branch names.\nAvailable: ${options}`,
+      initial,
+    );
+    if (input === null) return;
+    const wanted = input
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+    const wantedIds = lab.branches
+      .filter((b) => wanted.includes(b.name))
+      .map((b) => b.id);
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}/branches`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchIds: wantedIds }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not assign branches.");
+      toast.success("Branch assignments updated.");
+      await loadAll();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not assign branches.");
+    }
+  }
+
   async function deleteLab(lab: Lab) {
     if (!confirm(`Delete laboratory ${lab.name}? This removes all related data.`)) return;
     try {
@@ -175,6 +222,23 @@ export default function SecurityPage() {
     }
   }
 
+  async function uploadBranchLetterhead(branchId: string) {
+    const dataUrl = pdfDraftByBranch[branchId];
+    try {
+      const res = await fetch(`/api/admin/branches/${branchId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ letterheadPdfDataUrl: dataUrl || null }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not save letterhead.");
+      toast.success(dataUrl ? "Branch letterhead saved." : "Branch letterhead removed.");
+      await loadAll();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save letterhead.");
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -205,6 +269,7 @@ export default function SecurityPage() {
                   <TableHead>Lab</TableHead>
                   <TableHead>Branch</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Assigned branches</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,8 +305,25 @@ export default function SecurityPage() {
                     <TableCell>{u.laboratoryName ?? "—"}</TableCell>
                     <TableCell>{u.branchName ?? "—"}</TableCell>
                     <TableCell>{u.suspendedAt ? "Suspended" : "Active"}</TableCell>
+                    <TableCell className="text-xs">
+                      {(u.assignedBranchIds ?? [])
+                        .map((id) =>
+                          labs
+                            .find((l) => l.id === u.laboratoryId)
+                            ?.branches.find((b) => b.id === id)?.name,
+                        )
+                        .filter(Boolean)
+                        .join(", ") || "—"}
+                    </TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="sm" variant="outline" onClick={() => void saveUser(u)}>Edit</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void assignUserBranches(u)}
+                      >
+                        Branches
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -285,17 +367,55 @@ export default function SecurityPage() {
                 <p className="text-xs text-muted-foreground mb-1">Branches</p>
                 <div className="space-y-1">
                   {lab.branches.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between rounded border px-2 py-1">
-                      <span className="text-sm">
-                        {b.name} {b.active === false ? "(Suspended)" : ""}
-                      </span>
-                      <div className="space-x-1">
-                        <Button size="sm" variant="outline" onClick={() => void suspendBranch(b.id, b.active !== false)}>
-                          {b.active === false ? "Unsuspend" : "Suspend"}
+                    <div key={b.id} className="rounded border px-2 py-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">
+                          {b.name} {b.active === false ? "(Suspended)" : ""}
+                        </span>
+                        <div className="space-x-1">
+                          <Button size="sm" variant="outline" onClick={() => void suspendBranch(b.id, b.active !== false)}>
+                            {b.active === false ? "Unsuspend" : "Suspend"}
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => void deleteBranch(b.id)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="application/pdf"
+                          className="max-w-xs"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const dataUrl = reader.result;
+                              if (typeof dataUrl === "string") {
+                                setPdfDraftByBranch((m) => ({ ...m, [b.id]: dataUrl }));
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        <Button size="sm" variant="outline" onClick={() => void uploadBranchLetterhead(b.id)}>
+                          Save letterhead PDF
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => void deleteBranch(b.id)}>
-                          Delete
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setPdfDraftByBranch((m) => ({ ...m, [b.id]: "" }));
+                            void uploadBranchLetterhead(b.id);
+                          }}
+                        >
+                          Remove letterhead
                         </Button>
+                        {b.letterhead_pdf_data_url ? (
+                          <span className="text-xs text-muted-foreground">Letterhead uploaded</span>
+                        ) : null}
                       </div>
                     </div>
                   ))}

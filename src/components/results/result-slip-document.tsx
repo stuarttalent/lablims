@@ -43,6 +43,7 @@ export function ResultSlipDocument({
   store: DemoStore;
 }) {
   const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const [branchLetterheadPdf, setBranchLetterheadPdf] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +67,25 @@ export function ResultSlipDocument({
       cancelled = true;
     };
   }, [order.id, order.createdAt, store.settings.limsInstanceId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!order.branchId) {
+      setBranchLetterheadPdf(null);
+      return;
+    }
+    fetch(`/api/branches/${order.branchId}/letterhead`, { cache: "no-store" })
+      .then(async (res) => {
+        const data = (await res.json()) as { letterheadPdfDataUrl?: string | null };
+        if (!cancelled) setBranchLetterheadPdf(data.letterheadPdfDataUrl ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setBranchLetterheadPdf(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.branchId]);
 
   const grouped = new Map<TestDepartment, typeof order.tests>();
   for (const d of DEPT_ORDER) grouped.set(d, []);
@@ -95,6 +115,17 @@ export function ResultSlipDocument({
       />
 
       <div className="p-8 pb-6 print:p-7">
+        {branchLetterheadPdf ? (
+          <div className="mb-4 rounded-xl border border-slate-200 p-2 bg-white">
+            <object
+              data={branchLetterheadPdf}
+              type="application/pdf"
+              className="h-[180px] w-full rounded"
+              aria-label="Branch letterhead PDF"
+            />
+          </div>
+        ) : null}
+
         <header className="flex flex-col gap-6 border-b border-slate-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:border-slate-300">
           <div className="flex flex-1 flex-wrap items-start gap-5">
             {store.settings.logoDataUrl ? (

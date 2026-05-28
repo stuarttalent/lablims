@@ -27,6 +27,26 @@ export async function loadStoreFromSupabase(
 ): Promise<LoadedSupabaseStore> {
   const supabase = await getSupabaseClient();
   if (!supabase) throw new Error("Supabase client is not available");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
+
+  let currentRole: string | null = null;
+  let allowedBranchIds: string[] = [];
+  if (userId) {
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    currentRole = me?.role ?? null;
+    const { data: memberships } = await supabase
+      .from("profile_branch_memberships")
+      .select("branch_id")
+      .eq("profile_id", userId);
+    allowedBranchIds = (memberships ?? []).map((m) => m.branch_id);
+  }
 
   const [
     settingsRes,
@@ -67,13 +87,21 @@ export async function loadStoreFromSupabase(
   const profileMaps = buildProfileMaps(profilesRes.data ?? []);
 
   const patientUuidToAppId = new Map<string, string>();
-  const patients = (patientsRes.data ?? []).map((row) => {
+  const shouldBranchFilter = currentRole !== "super_admin" && allowedBranchIds.length > 0;
+  const branchAllowed = (branchId: string | null) =>
+    !shouldBranchFilter || (branchId && allowedBranchIds.includes(branchId));
+
+  const patients = (patientsRes.data ?? [])
+    .filter((row) => branchAllowed((row as { branch_id?: string | null }).branch_id ?? null))
+    .map((row) => {
     const p = mapPatient(row);
     patientUuidToAppId.set(row.id, p.id);
     return p;
   });
 
-  const doctors = (doctorsRes.data ?? []).map(mapDoctor);
+  const doctors = (doctorsRes.data ?? [])
+    .filter((row) => branchAllowed((row as { branch_id?: string | null }).branch_id ?? null))
+    .map(mapDoctor);
   const orderUuidToAppId = new Map<string, string>();
 
   const linesByOrder = new Map<string, ReturnType<typeof mapOrderLine>[]>();
@@ -84,16 +112,18 @@ export async function loadStoreFromSupabase(
     linesByOrder.set(line.order_id, arr);
   }
 
-  const orders = (ordersRes.data ?? []).map((row) => {
+  const orders = (ordersRes.data ?? [])
+    .filter((row) => branchAllowed((row as { branch_id?: string | null }).branch_id ?? null))
+    .map((row) => {
     const lines = linesByOrder.get(row.id) ?? [];
     const order = mapOrder(row, patientUuidToAppId, profileMaps, lines);
     orderUuidToAppId.set(row.id, order.id);
     return order;
   });
 
-  const invoices = (invoicesRes.data ?? []).map((row) =>
-    mapInvoice(row, patientUuidToAppId, orderUuidToAppId),
-  );
+  const invoices = (invoicesRes.data ?? [])
+    .filter((row) => branchAllowed((row as { branch_id?: string | null }).branch_id ?? null))
+    .map((row) => mapInvoice(row, patientUuidToAppId, orderUuidToAppId));
 
   const base = emptyStoreWithSettings(settings);
   const store: DemoStore = {

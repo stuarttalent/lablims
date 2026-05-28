@@ -67,10 +67,12 @@ export function mapPatient(row: {
   medical_aid: string;
   clinical_symptoms: string | null;
   clinical_history: string | null;
+  branch_id: string | null;
   created_at: string;
 }): Patient {
   return {
     id: appId(row.legacy_id, row.id),
+    branchId: row.branch_id ?? undefined,
     fullName: row.full_name,
     dateOfBirth: row.date_of_birth,
     age: row.age,
@@ -91,9 +93,11 @@ export function mapDoctor(row: {
   legacy_id: string | null;
   name: string;
   specialty: string;
+  branch_id: string | null;
 }): Doctor {
   return {
     id: appId(row.legacy_id, row.id),
+    branchId: row.branch_id ?? undefined,
     name: row.name,
     specialty: row.specialty,
   };
@@ -158,6 +162,7 @@ export function mapOrder(
     include_ai_comment_in_report: boolean;
     assigned_tech_id: string | null;
     assigned_scientist_id: string | null;
+    branch_id: string | null;
     created_at: string;
   },
   patientUuidToAppId: Map<string, string>,
@@ -168,6 +173,7 @@ export function mapOrder(
 
   return {
     id: appId(row.legacy_id, row.id),
+    branchId: row.branch_id ?? undefined,
     patientId: patientAppId,
     sampleType: row.sample_type,
     priority: row.priority,
@@ -200,6 +206,7 @@ export function mapInvoice(
     tax: number;
     total: number;
     currency_code: "USD" | "ZWL" | null;
+    branch_id: string | null;
     payment_method: Invoice["paymentMethod"] | null;
     payment_status: Invoice["paymentStatus"];
     receipt_number: string | null;
@@ -216,6 +223,7 @@ export function mapInvoice(
 
   return {
     id: appId(row.legacy_id, row.id),
+    branchId: row.branch_id ?? undefined,
     invoiceNumber: row.invoice_number,
     patientId: patientAppId,
     orderId: orderAppId,

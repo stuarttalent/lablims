@@ -61,6 +61,22 @@ async function resolveOrderUuid(
   return null;
 }
 
+async function resolveDefaultBranchId(laboratoryId: string): Promise<string | null> {
+  const supabase = await db();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("profile_branch_memberships")
+    .select("branch_id, lab_branches!inner(laboratory_id)")
+    .eq("profile_id", user.id)
+    .eq("lab_branches.laboratory_id", laboratoryId)
+    .limit(1)
+    .maybeSingle();
+  return data?.branch_id ?? null;
+}
+
 function resolveProfileUuid(
   ctx: SupabaseContext,
   appProfileId: string | undefined,
@@ -74,6 +90,7 @@ export async function persistPatientInsert(
   patient: Patient,
 ): Promise<void> {
   const supabase = await db();
+  const defaultBranchId = await resolveDefaultBranchId(ctx.laboratoryId);
   const { data, error } = await supabase
     .from("patients")
     .insert({
@@ -88,6 +105,7 @@ export async function persistPatientInsert(
       address: patient.address,
       referring_doctor: patient.referringDoctor,
       medical_aid: patient.medicalAid,
+      branch_id: patient.branchId ?? defaultBranchId,
       clinical_symptoms: patient.clinicalSymptoms ?? null,
       clinical_history: patient.clinicalHistory ?? null,
     })
@@ -131,6 +149,7 @@ export async function persistOrderInsert(
   if (!patientUuid) throw new Error("Patient not found for order.");
 
   const supabase = await db();
+  const defaultBranchId = await resolveDefaultBranchId(ctx.laboratoryId);
   const { data, error } = await supabase
     .from("lab_orders")
     .insert({
@@ -149,6 +168,7 @@ export async function persistOrderInsert(
       include_ai_comment_in_report: order.includeAiCommentInReport ?? false,
       assigned_tech_id: resolveProfileUuid(ctx, order.assignedTechId),
       assigned_scientist_id: resolveProfileUuid(ctx, order.assignedScientistId),
+      branch_id: order.branchId ?? defaultBranchId,
     })
     .select("id")
     .single();
@@ -216,6 +236,7 @@ export async function persistOrderUpdate(
     row.assigned_tech_id = resolveProfileUuid(ctx, patch.assignedTechId);
   if (patch.assignedScientistId !== undefined)
     row.assigned_scientist_id = resolveProfileUuid(ctx, patch.assignedScientistId);
+  if (patch.branchId !== undefined) row.branch_id = patch.branchId ?? null;
   if (Object.keys(row).length > 0) {
     const { error } = await supabase.from("lab_orders").update(row).eq("id", uuid);
     if (error) throw error;
@@ -291,6 +312,7 @@ export async function persistInvoiceInsert(
     : null;
 
   const supabase = await db();
+  const defaultBranchId = await resolveDefaultBranchId(ctx.laboratoryId);
   const { error } = await supabase.from("invoices").insert({
     laboratory_id: ctx.laboratoryId,
     legacy_id: invoice.id,
@@ -302,6 +324,7 @@ export async function persistInvoiceInsert(
     discount: invoice.discount,
     tax: invoice.tax,
     total: invoice.total,
+    branch_id: invoice.branchId ?? defaultBranchId,
     currency_code: invoice.currency,
     payment_method: invoice.paymentMethod ?? null,
     payment_status: invoice.paymentStatus,
@@ -333,6 +356,7 @@ export async function persistInvoiceUpdate(
   if (patch.tax != null) row.tax = patch.tax;
   if (patch.subtotal != null) row.subtotal = patch.subtotal;
   if (patch.total != null) row.total = patch.total;
+  if (patch.branchId !== undefined) row.branch_id = patch.branchId ?? null;
   if (patch.currency != null) row.currency_code = patch.currency;
   if (patch.medicalAidDetails !== undefined)
     row.medical_aid_details = patch.medicalAidDetails ?? null;

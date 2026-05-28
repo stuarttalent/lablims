@@ -37,9 +37,22 @@ export async function GET() {
     query = query.eq("laboratory_id", auth.ctx.laboratoryId);
   }
   const { data, error } = await query;
+  const { data: memberships, error: membershipError } = await supabase
+    .from("profile_branch_memberships")
+    .select("profile_id, branch_id");
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || membershipError) {
+    return NextResponse.json(
+      { error: error?.message ?? membershipError?.message ?? "Could not load users." },
+      { status: 500 },
+    );
+  }
+  const branchIdsByProfile = new Map<string, string[]>();
+  for (const m of memberships ?? []) {
+    branchIdsByProfile.set(m.profile_id, [
+      ...(branchIdsByProfile.get(m.profile_id) ?? []),
+      m.branch_id,
+    ]);
   }
 
   return NextResponse.json({
@@ -58,6 +71,7 @@ export async function GET() {
         row.lab_branches && typeof row.lab_branches === "object"
           ? (row.lab_branches as { name?: string }).name
           : undefined,
+      assignedBranchIds: branchIdsByProfile.get(row.id) ?? [],
       suspendedAt: row.suspended_at ?? undefined,
       professionalCredential: row.professional_credential ?? undefined,
       createdAt: row.created_at,
