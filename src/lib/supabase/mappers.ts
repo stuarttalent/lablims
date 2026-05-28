@@ -199,6 +199,7 @@ export function mapInvoice(
     discount: number;
     tax: number;
     total: number;
+    currency_code: "USD" | "ZWL" | null;
     payment_method: Invoice["paymentMethod"] | null;
     payment_status: Invoice["paymentStatus"];
     receipt_number: string | null;
@@ -223,6 +224,7 @@ export function mapInvoice(
     discount: Number(row.discount),
     tax: Number(row.tax),
     total: Number(row.total),
+    currency: row.currency_code ?? "USD",
     paymentMethod: row.payment_method ?? undefined,
     paymentStatus: row.payment_status,
     receiptNumber: row.receipt_number ?? undefined,

@@ -58,6 +58,7 @@ create type payment_method as enum (
 );
 
 create type payment_status as enum ('Paid', 'Partially Paid', 'Unpaid');
+create type invoice_currency as enum ('USD', 'ZWL');
 
 -- ---------------------------------------------------------------------------
 -- Laboratory (tenant root — one row per deployment / site)
@@ -251,6 +252,7 @@ create table public.invoices (
   discount numeric(12, 2) not null default 0,
   tax numeric(12, 2) not null default 0,
   total numeric(12, 2) not null default 0,
+  currency_code invoice_currency not null default 'USD',
   payment_method payment_method,
   payment_status payment_status not null default 'Unpaid',
   receipt_number text,

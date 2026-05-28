@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import type { PaymentMethod, PaymentStatus } from "@/types";
+import type { InvoiceCurrency, PaymentMethod, PaymentStatus } from "@/types";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { Printer } from "lucide-react";
@@ -25,6 +25,7 @@ import {
   resolvePrincipalMember,
 } from "@/lib/medical-aid";
 import { resolveTestPrice } from "@/lib/pricing";
+import { formatMoney } from "@/lib/currency";
 import type { MedicalAidDetails } from "@/types";
 
 export default function InvoiceDetailPage() {
@@ -105,6 +106,26 @@ export default function InvoiceDetailPage() {
                 <SelectItem value="Medical Aid">Medical Aid</SelectItem>
                 <SelectItem value="Corporate accounts">Corporate accounts</SelectItem>
                 <SelectItem value="Staff">Staff</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select
+              value={inv.currency}
+              onValueChange={(v) =>
+                v &&
+                updateInvoice(inv.id, {
+                  currency: v as InvoiceCurrency,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="ZWL">ZWL</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -218,26 +239,26 @@ export default function InvoiceDetailPage() {
               return (
                 <li key={tid} className="flex justify-between gap-3 px-3 py-2">
                   <span>{t?.name ?? tid}</span>
-                  <span className="font-mono">${line.toFixed(2)}</span>
+                  <span className="font-mono">{formatMoney(line, inv.currency)}</span>
                 </li>
               );
             })}
           </ul>
           <div className="flex justify-between text-sm pt-2">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>${inv.subtotal.toFixed(2)}</span>
+            <span>{formatMoney(inv.subtotal, inv.currency)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Discount</span>
-            <span>- ${inv.discount.toFixed(2)}</span>
+            <span>- {formatMoney(inv.discount, inv.currency)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Tax</span>
-            <span>${inv.tax.toFixed(2)}</span>
+            <span>{formatMoney(inv.tax, inv.currency)}</span>
           </div>
           <div className="flex justify-between text-base font-semibold border-t border-border/60 pt-2">
             <span>Total</span>
-            <span>${inv.total.toFixed(2)}</span>
+            <span>{formatMoney(inv.total, inv.currency)}</span>
           </div>
         </div>
 

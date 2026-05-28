@@ -25,6 +25,7 @@ import type {
   OrderTestLine,
   Patient,
   PaymentMethod,
+  InvoiceCurrency,
 } from "@/types";
 import {
   createContext,
@@ -80,6 +81,7 @@ type DataContextValue = {
     testIds: string[];
     discount?: number;
     tax?: number;
+    currency?: InvoiceCurrency;
     paymentMethod?: PaymentMethod;
     medicalAidDetails?: Invoice["medicalAidDetails"];
   }) => Invoice;
@@ -96,6 +98,7 @@ type DataContextValue = {
         | "tax"
         | "subtotal"
         | "total"
+        | "currency"
       >
     >,
   ) => void;
@@ -145,6 +148,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       startTransition(() => {
         const defaults = createInitialStore();
         if (saved) {
+          const normalizedInvoices = (saved.invoices ?? []).map((inv) => ({
+            ...inv,
+            currency: inv.currency ?? "USD",
+          }));
           const settings = {
             ...defaults.settings,
             ...saved.settings,
@@ -153,7 +160,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               ...(saved.settings.catalogueOverrides ?? {}),
             },
           };
-          let next: DemoStore = { ...saved, settings };
+          let next: DemoStore = { ...saved, invoices: normalizedInvoices, settings };
           if (!settings.limsInstanceId) {
             const limsInstanceId = crypto.randomUUID();
             next = { ...saved, settings: { ...settings, limsInstanceId } };
@@ -353,6 +360,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       testIds: string[];
       discount?: number;
       tax?: number;
+      currency?: InvoiceCurrency;
       paymentMethod?: PaymentMethod;
       medicalAidDetails?: Invoice["medicalAidDetails"];
     }) => {
@@ -376,6 +384,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           discount,
           tax,
           total,
+          currency: input.currency ?? "USD",
           paymentMethod: input.paymentMethod,
           paymentStatus: "Unpaid",
           medicalAidDetails: input.medicalAidDetails,
@@ -408,6 +417,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           | "tax"
           | "subtotal"
           | "total"
+          | "currency"
         >
       >,
     ) => {

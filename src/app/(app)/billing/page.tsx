@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatMoney } from "@/lib/currency";
 
 export default function BillingPage() {
   const { store } = useData();
@@ -30,7 +31,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
           <p className="text-sm text-muted-foreground">
-            Invoices, tenders, and payment tracking (USD).
+            Invoices, tenders, and payment tracking (USD/ZWL).
           </p>
         </div>
         <Button asChild className="gap-2">
@@ -105,7 +106,9 @@ function InvoiceTable({
                     <TableCell>
                       <Badge variant="secondary">{inv.paymentStatus}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">${inv.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(inv.total, inv.currency)}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/billing/${inv.id}`}>View</Link>

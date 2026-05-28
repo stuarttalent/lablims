@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { formatMoney } from "@/lib/currency";
 
 export default function ReportsPage() {
   const { store } = useData();
@@ -24,8 +25,14 @@ export default function ReportsPage() {
     return s + o.tests.length;
   }, 0);
 
-  const revenueMonth = store.invoices
-    .filter((i) => i.createdAt.slice(0, 7) === today.slice(0, 7))
+  const revenueMonth = store.invoices.filter(
+    (i) => i.createdAt.slice(0, 7) === today.slice(0, 7),
+  );
+  const revenueMonthUsd = revenueMonth
+    .filter((i) => i.currency === "USD")
+    .reduce((s, i) => s + i.total, 0);
+  const revenueMonthZwl = revenueMonth
+    .filter((i) => i.currency === "ZWL")
     .reduce((s, i) => s + i.total, 0);
 
   const pending = store.orders.filter((o) =>
@@ -88,9 +95,11 @@ export default function ReportsPage() {
               <CardTitle className="text-base">Revenue — current month (all invoices)</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">${revenueMonth.toFixed(0)}</p>
+              <p className="text-3xl font-semibold">
+                USD {revenueMonthUsd.toFixed(0)} · ZWL {revenueMonthZwl.toFixed(0)}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
-                USD totals, irrespective of payment status.
+                Totals by currency, irrespective of payment status.
               </p>
             </CardContent>
           </Card>
@@ -162,7 +171,7 @@ export default function ReportsPage() {
                       <p className="font-mono text-xs">{i.invoiceNumber}</p>
                       <Badge variant="secondary">{i.paymentStatus}</Badge>
                     </div>
-                    <p className="font-semibold">${i.total.toFixed(2)}</p>
+                    <p className="font-semibold">{formatMoney(i.total, i.currency)}</p>
                   </div>
                 ))
               )}

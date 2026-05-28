@@ -24,7 +24,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import type { MedicalAidDetails, PaymentMethod } from "@/types";
+import type { InvoiceCurrency, MedicalAidDetails, PaymentMethod } from "@/types";
 
 const DEPT_ORDER: TestDepartment[] = [
   "Haematology",
@@ -43,6 +43,7 @@ export default function NewInvoicePage() {
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [currency, setCurrency] = useState<InvoiceCurrency>("USD");
   const [medicalAid, setMedicalAid] = useState<MedicalAidDetails>(() =>
     emptyMedicalAidDetails(),
   );
@@ -126,6 +127,7 @@ export default function NewInvoicePage() {
       discount: parseFloat(discount || "0") || 0,
       tax: parseFloat(tax || "0") || 0,
       paymentMethod: paymentMethod || undefined,
+      currency,
       medicalAidDetails: aidPayload,
     });
     toast.success("Invoice generated.");
@@ -186,12 +188,24 @@ export default function NewInvoicePage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Discount (USD)</Label>
+            <Label>Discount ({currency})</Label>
             <Input value={discount} onChange={(e) => setDiscount(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Tax / levy (USD)</Label>
+            <Label>Tax / levy ({currency})</Label>
             <Input value={tax} onChange={(e) => setTax(e.target.value)} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Invoice currency</Label>
+            <Select value={currency} onValueChange={(v) => v && setCurrency(v as InvoiceCurrency)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="ZWL">ZWL</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Default payment method (optional)</Label>
@@ -220,8 +234,8 @@ export default function NewInvoicePage() {
           </div>
           <div className="sm:col-span-2 rounded-xl border border-dashed p-3 text-sm">
             <p>
-              Subtotal: <strong>${preview.subtotal.toFixed(2)}</strong> · Total:{" "}
-              <strong>${preview.total.toFixed(2)}</strong>
+              Subtotal: <strong>{currency} {preview.subtotal.toFixed(2)}</strong> · Total:{" "}
+              <strong>{currency} {preview.total.toFixed(2)}</strong>
             </p>
           </div>
         </CardContent>

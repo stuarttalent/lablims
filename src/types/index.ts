@@ -168,6 +168,7 @@ export type PaymentMethod =
   | "Staff";
 
 export type PaymentStatus = "Paid" | "Partially Paid" | "Unpaid";
+export type InvoiceCurrency = "USD" | "ZWL";
 
 /** Captured on invoice when billing to a medical aid scheme. */
 export interface MedicalAidDetails {
@@ -190,6 +191,7 @@ export interface Invoice {
   discount: number;
   tax: number;
   total: number;
+  currency: InvoiceCurrency;
   paymentMethod?: PaymentMethod;
   paymentStatus: PaymentStatus;
   receiptNumber?: string;
