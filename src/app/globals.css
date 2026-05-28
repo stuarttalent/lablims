@@ -146,6 +146,23 @@
   body {
     background: white !important;
   }
+  body * {
+    visibility: hidden;
+  }
+  .result-slip-print-root,
+  .result-slip-print-root * {
+    visibility: visible;
+  }
+  .result-slip-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
 }
 
 #lablims-result-slip {

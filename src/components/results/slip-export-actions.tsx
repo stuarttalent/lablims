@@ -35,7 +35,10 @@ export function SlipExportActions({
         const blob = await buildResultSlipPdfBlob({ element: el });
         readyBlobUrl = URL.createObjectURL(blob);
       } catch {
-        toast.error("Unable to export PDF.");
+        toast.message("Opening print dialog", {
+          description: "Choose Save as PDF to download this report.",
+        });
+        window.print();
         return;
       }
     }
