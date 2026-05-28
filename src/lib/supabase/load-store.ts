@@ -89,7 +89,7 @@ export async function loadStoreFromSupabase(
   const patientUuidToAppId = new Map<string, string>();
   const shouldBranchFilter = currentRole !== "super_admin" && allowedBranchIds.length > 0;
   const branchAllowed = (branchId: string | null) =>
-    !shouldBranchFilter || (branchId && allowedBranchIds.includes(branchId));
+    !shouldBranchFilter || branchId == null || allowedBranchIds.includes(branchId);
 
   const patients = (patientsRes.data ?? [])
     .filter((row) => branchAllowed((row as { branch_id?: string | null }).branch_id ?? null))
