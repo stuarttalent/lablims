@@ -6,6 +6,7 @@ import type {
   Invoice,
   LabOrder,
   LabSettings,
+  MicrobiologyResult,
   MockUser,
   OrderTestLine,
   Patient,
@@ -118,6 +119,7 @@ export function mapOrderLine(row: {
   reference_range: string | null;
   flag: OrderTestLine["flag"] | null;
   comment: string | null;
+  microbiology_result?: unknown | null;
   entered_by_name: string | null;
   entered_by_credential: string | null;
   verified_by_name: string | null;
@@ -126,6 +128,13 @@ export function mapOrderLine(row: {
   result_status: OrderTestLine["resultStatus"] | null;
   amendments: unknown;
 }): OrderTestLine {
+  const microbiologyResult =
+    row.microbiology_result &&
+    typeof row.microbiology_result === "object" &&
+    !Array.isArray(row.microbiology_result)
+      ? (row.microbiology_result as MicrobiologyResult)
+      : undefined;
+
   return {
     testId: row.test_id,
     resultValue: row.result_value ?? undefined,
@@ -133,6 +142,7 @@ export function mapOrderLine(row: {
     referenceRange: row.reference_range ?? undefined,
     flag: row.flag ?? undefined,
     comment: row.comment ?? undefined,
+    microbiologyResult,
     enteredBy: row.entered_by_name ?? undefined,
     enteredByCredential: row.entered_by_credential ?? undefined,
     verifiedBy: row.verified_by_name ?? undefined,

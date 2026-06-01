@@ -4,8 +4,11 @@ import {
   ResultProfileComments,
   ResultProfileResultsTable,
 } from "@/components/results/result-profile-results-table";
+import { MicrobiologyResultsReport } from "@/components/results/microbiology-results-report";
+import { getTestById } from "@/data/catalogue";
 import { filterFbcLinesForDisplay } from "@/lib/fbc-differential";
 import { groupOrderTests } from "@/lib/group-order-tests";
+import { isMicrobiologyMcsTest } from "@/lib/microbiology";
 import { letterheadPdfToImage } from "@/lib/letterhead-image";
 import type { DemoStore, LabOrder, OrderTestLine, Patient } from "@/types";
 import { useEffect, useState } from "react";
@@ -266,16 +269,45 @@ export function ResultSlipDocument({
         </section>
 
         <div className="mt-6 space-y-6">
-          {resultGroups.map((group) => (
-            <div key={group.id}>
-              <ResultProfileResultsTable
-                title={group.title}
-                lines={filterFbcLinesForDisplay(group.lines)}
-                specimenType={group.specimenType}
-              />
-              <ResultProfileComments lines={group.lines} />
-            </div>
-          ))}
+          {resultGroups.map((group) => {
+            const microLines = group.lines.filter((l) =>
+              isMicrobiologyMcsTest(l.testId),
+            );
+            const tableLines = filterFbcLinesForDisplay(
+              group.lines.filter((l) => !isMicrobiologyMcsTest(l.testId)),
+            );
+            return (
+              <div key={group.id}>
+                {tableLines.length > 0 ? (
+                  <ResultProfileResultsTable
+                    title={group.title}
+                    lines={tableLines}
+                    specimenType={group.specimenType}
+                  />
+                ) : null}
+                {tableLines.length === 0 && microLines.length > 0 ? (
+                  <div className="mb-3 border-b border-blue-200 pb-2 print:border-slate-400">
+                    <h3 className="text-sm font-bold text-blue-800 print:text-slate-900">
+                      {group.title}
+                    </h3>
+                    <p className="text-[10px] text-slate-600 print:text-slate-700">
+                      Specimen: {group.specimenType}
+                    </p>
+                  </div>
+                ) : null}
+                {microLines.map((line) => (
+                  <MicrobiologyResultsReport
+                    key={line.testId}
+                    testName={
+                      getTestById(line.testId)?.name ?? line.testId
+                    }
+                    line={line}
+                  />
+                ))}
+                <ResultProfileComments lines={group.lines} />
+              </div>
+            );
+          })}
         </div>
 
         <section className="mt-8 overflow-hidden rounded-xl border border-teal-100 bg-gradient-to-b from-white to-teal-50/30 shadow-sm print:break-inside-avoid print:border-2 print:border-slate-400 print:bg-white print:from-white print:to-white print:shadow-none">

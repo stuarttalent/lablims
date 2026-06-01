@@ -662,6 +662,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     price: 32,
     referenceRange: "No significant growth",
     units: "—",
+    resultStyle: "microbiology_mcs",
   },
   {
     id: "t-stool-mcs",
@@ -673,6 +674,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     price: 34,
     referenceRange: "No pathogens isolated",
     units: "—",
+    resultStyle: "microbiology_mcs",
   },
   {
     id: "t-blood-culture",
@@ -684,6 +686,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     price: 45,
     referenceRange: "No growth at 5 days",
     units: "—",
+    resultStyle: "microbiology_mcs",
   },
   {
     id: "t-hvs",
@@ -695,6 +698,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     price: 30,
     referenceRange: "Normal flora / no pathogens",
     units: "—",
+    resultStyle: "microbiology_mcs",
   },
   {
     id: "t-wound",
@@ -706,6 +710,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     price: 30,
     referenceRange: "Commensals only / MRSA negative",
     units: "—",
+    resultStyle: "microbiology_mcs",
   },
   {
     id: "t-hiv",

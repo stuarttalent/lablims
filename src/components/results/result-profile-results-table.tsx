@@ -6,6 +6,7 @@ import {
   formatFbcDifferentialResult,
   isFbcAutoComment,
 } from "@/lib/fbc-differential";
+import { isMicroStructuredComment } from "@/lib/microbiology";
 import type { OrderTestLine } from "@/types";
 
 function flagLabel(flag?: string): string {
@@ -87,7 +88,9 @@ export function ResultProfileComments({
   return (
     <>
       {lines.map((line) =>
-        line.comment && !isFbcAutoComment(line.comment) ? (
+        line.comment &&
+        !isFbcAutoComment(line.comment) &&
+        !isMicroStructuredComment(line.comment) ? (
           <p
             key={`${line.testId}-c`}
             className="mt-1 border-l-2 border-slate-400 pl-2 text-[10px] text-slate-700"

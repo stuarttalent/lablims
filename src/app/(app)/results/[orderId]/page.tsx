@@ -26,9 +26,22 @@ import {
   fbcDisplayTestName,
   filterFbcLinesForDisplay,
 } from "@/lib/fbc-differential";
+import {
+  isMicrobiologyMcsTest,
+  microbiologyLinePatch,
+  microbiologyResultSummary,
+  parseMicrobiologyResult,
+} from "@/lib/microbiology";
+import { MicrobiologyResultEditor } from "@/components/results/microbiology-result-editor";
 import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
 import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
-import type { LineResultStatus, OrderStatus, OrderTestLine, ResultFlag } from "@/types";
+import type {
+  LineResultStatus,
+  MicrobiologyResult,
+  OrderStatus,
+  OrderTestLine,
+  ResultFlag,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -160,6 +173,9 @@ export default function ResultsWorkspacePage() {
   const [lineDrafts, setLineDrafts] = useState<Record<string, LineDraftFields>>(
     {},
   );
+  const [microDrafts, setMicroDrafts] = useState<
+    Record<string, MicrobiologyResult>
+  >({});
   const [amendDialog, setAmendDialog] = useState<{
     testId: string;
     testName: string;
@@ -180,6 +196,11 @@ export default function ResultsWorkspacePage() {
     setAmendDialog(null);
     setEditingAuthorizedTestId(null);
     setLineDrafts((prev) => {
+      const next = { ...prev };
+      delete next[amendDialog.testId];
+      return next;
+    });
+    setMicroDrafts((prev) => {
       const next = { ...prev };
       delete next[amendDialog.testId];
       return next;
@@ -205,6 +226,24 @@ export default function ResultsWorkspacePage() {
       return { ...line, ...draft };
     }
     return line;
+  }
+
+  function getDisplayMicro(line: OrderTestLine): MicrobiologyResult {
+    if (editingAuthorizedTestId === line.testId && microDrafts[line.testId]) {
+      return microDrafts[line.testId];
+    }
+    return parseMicrobiologyResult(line);
+  }
+
+  function handleMicroChange(line: OrderTestLine, next: MicrobiologyResult) {
+    if (!order) return;
+    const patch = microbiologyLinePatch(next);
+    if (isAuthorizedResultLine(line)) {
+      if (editingAuthorizedTestId !== line.testId) return;
+      setMicroDrafts((prev) => ({ ...prev, [line.testId]: next }));
+      return;
+    }
+    updateOrderLine(order.id, line.testId, patch);
   }
 
   function handleLineFieldChange(
@@ -300,6 +339,13 @@ export default function ResultsWorkspacePage() {
     meta?: { units?: string; referenceRange?: string },
   ) {
     setEditingAuthorizedTestId(line.testId);
+    if (isMicrobiologyMcsTest(line.testId)) {
+      setMicroDrafts((prev) => ({
+        ...prev,
+        [line.testId]: parseMicrobiologyResult(line),
+      }));
+      return;
+    }
     setLineDrafts((prev) => ({
       ...prev,
       [line.testId]: lineToDraft(line, meta),
@@ -313,10 +359,31 @@ export default function ResultsWorkspacePage() {
       delete next[testId];
       return next;
     });
+    setMicroDrafts((prev) => {
+      const next = { ...prev };
+      delete next[testId];
+      return next;
+    });
   }
 
   function saveAuthorizedEdit(line: OrderTestLine, testName: string) {
     if (!user || !order) return;
+    if (isMicrobiologyMcsTest(line.testId)) {
+      const draft = microDrafts[line.testId];
+      if (!draft) return;
+      const current = parseMicrobiologyResult(line);
+      if (JSON.stringify(current) === JSON.stringify(draft)) {
+        toast.info("No changes to save.");
+        cancelAuthorizedEdit(line.testId);
+        return;
+      }
+      setAmendDialog({
+        testId: line.testId,
+        testName,
+        patch: microbiologyLinePatch(draft),
+      });
+      return;
+    }
     const draft = lineDrafts[line.testId];
     if (!draft) return;
     const patch = buildLinePatch(line, draft);
@@ -604,6 +671,7 @@ export default function ResultsWorkspacePage() {
             const rulesBrief = heuristicPreAuthSummary(issues);
             const displayLine = getDisplayLine(line, meta);
             const isEditingAuthorized = editingAuthorizedTestId === line.testId;
+            const isMicro = isMicrobiologyMcsTest(line.testId);
             const testLabel = fbcDisplayTestName(
               line.testId,
               meta?.name ?? line.testId,
@@ -667,6 +735,21 @@ export default function ResultsWorkspacePage() {
                   </div>
                 </div>
 
+                {isMicro ? (
+                  <div className="rounded-xl border border-teal-200/80 bg-teal-50/20 p-4 dark:border-teal-900/50 dark:bg-teal-950/15">
+                    <MicrobiologyResultEditor
+                      value={getDisplayMicro(line)}
+                      onChange={(next) => handleMicroChange(line, next)}
+                      disabled={lineFieldsDisabled(line)}
+                    />
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Report summary:{" "}
+                      <span className="font-medium text-foreground">
+                        {microbiologyResultSummary(getDisplayMicro(line))}
+                      </span>
+                    </p>
+                  </div>
+                ) : (
                 <div
                   className={cn(
                     "grid gap-3 sm:grid-cols-2 rounded-xl border p-4",
@@ -806,9 +889,13 @@ export default function ResultsWorkspacePage() {
                       </Button>
                     ) : null}
                   </div>
+                </div>
+                )}
+
+                <div className="mt-3 space-y-3">
                   <ResultAmendmentHistory amendments={line.amendments} />
-                  {prior ? (
-                    <div className="sm:col-span-2 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-3 space-y-2">
+                  {prior && !isMicro ? (
+                    <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-3 space-y-2">
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
                         Prior result (same patient &amp; test)
                       </p>
@@ -856,7 +943,7 @@ export default function ResultsWorkspacePage() {
                       ) : null}
                     </div>
                   ) : null}
-                  <div className="sm:col-span-2 text-xs text-muted-foreground space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     <p>
                       Entered by: {line.enteredBy ?? "—"}
                       {line.enteredByCredential

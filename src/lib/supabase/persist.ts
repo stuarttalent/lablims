@@ -1,5 +1,9 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ensureCatalogueTestsForLaboratory } from "@/lib/supabase/ensure-catalogue";
+import {
+  microbiologyResultSummary,
+  serializeMicrobiologyToComment,
+} from "@/lib/microbiology";
 
 async function db() {
   const client = await getSupabaseClient();
@@ -324,7 +328,19 @@ function lineRow(
     result_status: line.resultStatus ?? null,
     amendments: line.amendments ?? [],
     sort_order: sortOrder,
+    microbiology_result: line.microbiologyResult ?? null,
   };
+}
+
+function applyMicrobiologyFallback(
+  row: Record<string, unknown>,
+  line: Partial<OrderTestLine>,
+): void {
+  if (line.microbiologyResult === undefined) return;
+  row.comment =
+    line.comment ?? serializeMicrobiologyToComment(line.microbiologyResult);
+  row.result_value =
+    line.resultValue ?? microbiologyResultSummary(line.microbiologyResult);
 }
 
 export async function persistOrderUpdate(
@@ -412,6 +428,9 @@ export async function persistOrderLineUpdate(
     row.verification_date = patch.verificationDate ?? null;
   if (patch.resultStatus !== undefined) row.result_status = patch.resultStatus ?? null;
   if (patch.amendments !== undefined) row.amendments = patch.amendments;
+  if (patch.microbiologyResult !== undefined) {
+    row.microbiology_result = patch.microbiologyResult;
+  }
 
   const { data: existing } = await supabase
     .from("order_test_lines")
@@ -421,24 +440,42 @@ export async function persistOrderLineUpdate(
     .maybeSingle();
 
   if (existing?.id) {
-    const { error } = await supabase
+    let { error } = await supabase
       .from("order_test_lines")
       .update(row)
       .eq("id", existing.id);
+    if (error && hasMissingColumn(error, "microbiology_result")) {
+      const fallback = { ...row };
+      delete fallback.microbiology_result;
+      applyMicrobiologyFallback(fallback, patch);
+      ({ error } = await supabase
+        .from("order_test_lines")
+        .update(fallback)
+        .eq("id", existing.id));
+    }
     if (error) throw error;
   } else {
     const merged: OrderTestLine = { testId, ...patch };
-    const row = lineRow(ctx, orderUuid, merged, 0, branchId);
-    const { error } = await supabase.from("order_test_lines").insert(row);
+    const insertRow = lineRow(ctx, orderUuid, merged, 0, branchId);
+    let { error } = await supabase.from("order_test_lines").insert(insertRow);
+    if (error && hasMissingColumn(error, "microbiology_result")) {
+      const fallback = { ...insertRow } as Record<string, unknown>;
+      delete fallback.microbiology_result;
+      applyMicrobiologyFallback(fallback, merged);
+      ({ error } = await supabase.from("order_test_lines").insert(fallback));
+    }
     if (error && hasMissingColumn(error, "branch_id")) {
-      const { branch_id: _b, ...withoutBranch } = row as Record<string, unknown> & {
-        branch_id?: string | null;
-      };
-      const { error: fallbackError } = await supabase
-        .from("order_test_lines")
-        .insert(withoutBranch);
-      if (fallbackError) throw fallbackError;
-      return;
+      const { branch_id: _b, ...withoutBranch } = insertRow as Record<
+        string,
+        unknown
+      > & { branch_id?: string | null };
+      ({ error } = await supabase.from("order_test_lines").insert(withoutBranch));
+      if (error && hasMissingColumn(error, "microbiology_result")) {
+        const fallback = { ...withoutBranch };
+        delete fallback.microbiology_result;
+        applyMicrobiologyFallback(fallback, merged);
+        ({ error } = await supabase.from("order_test_lines").insert(fallback));
+      }
     }
     if (error) throw error;
   }

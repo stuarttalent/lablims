@@ -41,6 +41,8 @@ export interface CatalogueTest {
    * add these lines via a panel template instead.
    */
   panelAnalyte?: boolean;
+  /** Structured result entry (e.g. culture & sensitivity). */
+  resultStyle?: "numeric" | "microbiology_mcs";
   /**
    * Optional profile expansion list. When selected, these constituent tests are
    * added as individual order/result lines.
@@ -123,6 +125,36 @@ export type ResultAmendment = {
   reason: string;
 };
 
+/** Antimicrobial susceptibility (culture & sensitivity). */
+export type MicroSusceptibility = "S" | "I" | "R" | "NA";
+
+export interface MicroAntibioticResult {
+  drug: string;
+  result: MicroSusceptibility;
+  mic?: string;
+}
+
+export interface MicroOrganismResult {
+  name: string;
+  /** e.g. scanty, moderate, heavy, predominant */
+  quantity?: string;
+  antibiotics: MicroAntibioticResult[];
+}
+
+/** Structured microbiology (MCS) report — cultures, organisms, antibiogram. */
+export interface MicrobiologyResult {
+  cultureOutcome?:
+    | "No growth"
+    | "Growth"
+    | "Mixed growth"
+    | "Contaminated"
+    | "Normal flora";
+  colonyCount?: string;
+  gramStain?: string;
+  organisms: MicroOrganismResult[];
+  additionalNotes?: string;
+}
+
 export interface OrderTestLine {
   testId: string;
   resultValue?: string;
@@ -130,6 +162,7 @@ export interface OrderTestLine {
   referenceRange?: string;
   flag?: ResultFlag;
   comment?: string;
+  microbiologyResult?: MicrobiologyResult;
   enteredBy?: string;
   /** Qualifications / registration shown on the result slip. */
   enteredByCredential?: string;

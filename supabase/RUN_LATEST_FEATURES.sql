@@ -106,3 +106,7 @@ WHERE i.order_id = o.id
 --   ORDER BY created_at ASC LIMIT 1
 -- )
 -- WHERE branch_id IS NULL AND laboratory_id IS NOT NULL;
+
+-- 10) Structured microbiology (MCS) results on order lines
+ALTER TABLE public.order_test_lines
+  ADD COLUMN IF NOT EXISTS microbiology_result jsonb;
