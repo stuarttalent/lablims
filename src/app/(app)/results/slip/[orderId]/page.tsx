@@ -134,18 +134,16 @@ export default function ResultSlipPage() {
 
       <div
         className={cn(
-          "result-slip-print-root rounded-xl border bg-muted/20 p-4 overflow-auto",
+          "result-slip-print-root flex justify-center overflow-auto py-6 print:py-0 print:overflow-visible",
           viewMode === "pdf" && pdfBlobUrl ? "hidden print:block" : "block",
         )}
       >
-        <div className="mx-auto w-[210mm] min-h-[297mm] shadow-md print:shadow-none">
-          <ResultSlipDocument
-            order={order}
-            patient={patient}
-            store={store}
-            onReady={() => setSlipAssetsReady(true)}
-          />
-        </div>
+        <ResultSlipDocument
+          order={order}
+          patient={patient}
+          store={store}
+          onReady={() => setSlipAssetsReady(true)}
+        />
       </div>
 
       {viewMode === "pdf" ? (
