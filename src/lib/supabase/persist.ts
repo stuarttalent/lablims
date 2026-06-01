@@ -603,10 +603,19 @@ export async function persistSettingsUpdate(
   if (patch.priceOverrides != null) row.price_overrides = patch.priceOverrides;
   if (patch.catalogueOverrides != null)
     row.catalogue_overrides = patch.catalogueOverrides;
-  const { error } = await supabase
+  if (patch.customTests != null) row.custom_tests = patch.customTests;
+  let { error } = await supabase
     .from("lab_settings")
     .update(row)
     .eq("laboratory_id", laboratoryId);
+  if (error && hasMissingColumn(error, "custom_tests")) {
+    const fallback = { ...row };
+    delete fallback.custom_tests;
+    ({ error } = await supabase
+      .from("lab_settings")
+      .update(fallback)
+      .eq("laboratory_id", laboratoryId));
+  }
   if (error) throw error;
 }
 

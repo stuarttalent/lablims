@@ -1,5 +1,7 @@
-import { getTestById } from "@/data/catalogue";
+import { getCatalogueOverride, getTestById } from "@/lib/catalogue-access";
+import { resolveTestKind } from "@/lib/test-kind";
 import type {
+  LabSettings,
   MicrobiologyResult,
   MicroOrganismResult,
   MicroSusceptibility,
@@ -47,9 +49,17 @@ export function isMicroStructuredComment(comment?: string): boolean {
   return Boolean(comment?.startsWith(MICRO_JSON_PREFIX));
 }
 
-export function isMicrobiologyMcsTest(testId: string): boolean {
+export function isMicrobiologyMcsTest(
+  testId: string,
+  settings?: Pick<LabSettings, "customTests" | "catalogueOverrides">,
+): boolean {
   if (MICRO_MCS_TEST_IDS.has(testId)) return true;
-  return getTestById(testId)?.resultStyle === "microbiology_mcs";
+  const test = getTestById(testId, settings);
+  if (!test) return false;
+  return (
+    resolveTestKind(test, getCatalogueOverride(testId, settings)) ===
+    "microbiology"
+  );
 }
 
 export function emptyMicrobiologyResult(): MicrobiologyResult {

@@ -1,7 +1,9 @@
 "use client";
 
-import { TEST_CATALOGUE } from "@/data/catalogue";
+import { getCatalogueTests, nextCustomTestId } from "@/data/catalogue";
+import { ConfigureTestCard } from "@/components/catalogue/configure-test-card";
 import { useData } from "@/contexts/data-context";
+import { applyTestKindToCatalogueTest } from "@/lib/test-kind";
 import { useAuth } from "@/contexts/auth-context";
 import { hasAdminPrivileges } from "@/lib/permissions";
 import type {
@@ -13,7 +15,7 @@ import type {
   TestDepartment,
 } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,6 +88,52 @@ export default function ConfigureCataloguePage() {
   }
 
   const overrides = store.settings.catalogueOverrides;
+  const catalogue = getCatalogueTests(store.settings);
+  const customIds = new Set(store.settings.customTests.map((t) => t.id));
+
+  function addCustomTest() {
+    const id = nextCustomTestId(store.settings.customTests);
+    const test = applyTestKindToCatalogueTest(
+      {
+        id,
+        name: "New laboratory test",
+        department: "Chemistry",
+        sampleType: "Serum",
+        turnaroundTime: "24 hours",
+        price: 0,
+      },
+      "quantitative",
+    );
+    updateSettings({
+      customTests: [...store.settings.customTests, test],
+    });
+    toast.success("Custom test added — configure name, type, and price.");
+  }
+
+  function patchCustomTest(id: string, patch: Partial<(typeof catalogue)[0]>) {
+    updateSettings({
+      customTests: store.settings.customTests.map((t) =>
+        t.id === id ? { ...t, ...patch } : t,
+      ),
+    });
+  }
+
+  function deleteCustomTest(id: string) {
+    const customTests = store.settings.customTests.filter((t) => t.id !== id);
+    const priceOverrides = { ...store.settings.priceOverrides };
+    delete priceOverrides[id];
+    const catalogueOverrides = { ...overrides };
+    delete catalogueOverrides[id];
+    updateSettings({ customTests, priceOverrides, catalogueOverrides });
+    toast.message("Custom test removed");
+  }
+
+  function patchPrice(testId: string, price: number | null) {
+    const priceOverrides = { ...store.settings.priceOverrides };
+    if (price === null) delete priceOverrides[testId];
+    else priceOverrides[testId] = price;
+    updateSettings({ priceOverrides });
+  }
 
   function setOverride(testId: string, next: CatalogueTestOverride | null) {
     const copy = { ...overrides };
@@ -111,19 +159,25 @@ export default function ConfigureCataloguePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Configure tests</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Reference intervals by age and sex, and default comments triggered by flags
-            or result text. First matching age/sex band applies. AI and the results
-            workspace use these rules.
+            Add tests, set result type (profile, quantitative, qualitative, or
+            microbiology), pricing, reference intervals, and auto-comments. AI and the
+            results workspace use these rules.
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/catalogue">View catalogue</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" className="gap-1" onClick={addCustomTest}>
+            <Plus className="size-4" />
+            Add test
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/catalogue">View catalogue</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6">
         {DEPT_ORDER.map((dep) => {
-          const tests = TEST_CATALOGUE.filter((t) => t.department === dep);
+          const tests = catalogue.filter((t) => t.department === dep);
           if (tests.length === 0) return null;
           return (
             <div key={dep} className="space-y-3">
@@ -135,26 +189,28 @@ export default function ConfigureCataloguePage() {
                 const o = overrides[t.id] ?? {};
                 const bands = o.referenceBands ?? [];
                 const rules = o.defaultCommentRules ?? [];
+                const isCustom = customIds.has(t.id);
 
                 return (
-                  <Card key={t.id} className="border-border/80 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle className="text-base">{t.name}</CardTitle>
-                        <Badge variant="outline" className="font-mono text-[10px]">
-                          {t.id}
+                  <div key={t.id} className="space-y-0">
+                    <ConfigureTestCard
+                      test={t}
+                      isCustom={isCustom}
+                      settings={store.settings}
+                      onPatchCustom={patchCustomTest}
+                      onPatchOverride={(testId, patch) =>
+                        patchOverride(testId, patch)
+                      }
+                      onDeleteCustom={isCustom ? deleteCustomTest : undefined}
+                      onPatchPrice={patchPrice}
+                    />
+                    <Card className="border-border/80 shadow-sm border-t-0 rounded-t-none -mt-px">
+                    <CardContent className="space-y-6 pt-6">
+                      {(bands.length || rules.length) && !isCustom ? (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Custom reference / comment rules active
                         </Badge>
-                        {bands.length || rules.length ? (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Custom rules active
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Catalogue default reference text: {t.referenceRange ?? "—"}
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                      ) : null}
                       <section className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <Label className="text-sm font-medium">
@@ -424,6 +480,7 @@ export default function ConfigureCataloguePage() {
                       </section>
                     </CardContent>
                   </Card>
+                  </div>
                 );
               })}
             </div>

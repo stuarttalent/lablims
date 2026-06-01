@@ -16,6 +16,10 @@ import {
   CLINICAL_GUIDANCE_DISCLAIMER,
   EDLIZ_SOURCE_LABEL,
 } from "@/lib/ai/clinical-guidance-types";
+import {
+  AI_RESULT_COMMENT_MAX_WORDS,
+  truncateToWords,
+} from "@/lib/truncate-words";
 
 const CERTAINTY_LABEL = {
   consider: "Consider",
@@ -81,7 +85,7 @@ Reference document: ${EDLIZ_PDF_URL}
 
 Return JSON only:
 {
-  "narrative": "2-4 paragraphs plain text interpretive summary",
+  "narrative": "Plain text interpretive summary (max 100 words total for entire report comment)",
   "impressions": [{"label":"","certainty":"consider|likely|consistent_with","rationale":"","edlizSection":""}],
   "suggestedFurtherTests": [{"testName":"","reason":"","priority":"routine|urgent|if_clinically_indicated","edlizSection":""}],
   "guidelineReferences": [{"source":"EDLIZ 2015 (Zimbabwe)","section":"","excerpt":""}]
@@ -91,7 +95,8 @@ Rules:
 - Use ONLY facts from input JSON and EDLIZ excerpts above.
 - suggestedFurtherTests: concrete lab tests not already in results.
 - impressions: clinical pictures with appropriate certainty — never state definitive diagnosis.
-- Align with rule-based suggestions when provided in user message.`,
+- Align with rule-based suggestions when provided in user message.
+- The entire narrative must not exceed 100 words.`,
         },
         {
           role: "user",
@@ -181,5 +186,5 @@ export function formatGuidanceForSlip(guidance: ClinicalGuidance): string {
   }
 
   parts.push(guidance.disclaimer);
-  return parts.join("\n\n");
+  return truncateToWords(parts.join("\n\n"), AI_RESULT_COMMENT_MAX_WORDS);
 }

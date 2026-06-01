@@ -611,6 +611,7 @@ const DEFAULT_SETTINGS = (): DemoStore["settings"] => ({
   fhirOrganizationId: "lab-main",
   letterheadA4PdfDataUrl: undefined,
   catalogueOverrides: {},
+  customTests: [],
 });
 
 export function createInitialStore(): DemoStore {

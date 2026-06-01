@@ -1,9 +1,12 @@
 import type { CatalogueTest } from "@/types";
 
-/** Tests shown on the default order / invoice pickers. */
-export function testsForOrderPicker(): CatalogueTest[] {
-  return TEST_CATALOGUE;
-}
+export {
+  getCatalogueTests,
+  getCatalogueOverride,
+  getTestById,
+  nextCustomTestId,
+  testsForOrderPicker,
+} from "@/lib/catalogue-access";
 
 const FBC_PANEL: CatalogueTest[] = [
   {
@@ -802,6 +805,3 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
 ];
 
-export function getTestById(id: string): CatalogueTest | undefined {
-  return TEST_CATALOGUE.find((t) => t.id === id);
-}

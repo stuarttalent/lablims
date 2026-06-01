@@ -121,7 +121,7 @@ export function ResultSlipDocument({
     onReady?.();
   }, [letterheadResolved, onReady]);
 
-  const resultGroups = groupOrderTests(order.tests);
+  const resultGroups = groupOrderTests(order.tests, store.settings);
 
   const reportDate = new Date().toISOString().slice(0, 10);
   const released =
@@ -271,10 +271,12 @@ export function ResultSlipDocument({
         <div className="mt-6 space-y-6">
           {resultGroups.map((group) => {
             const microLines = group.lines.filter((l) =>
-              isMicrobiologyMcsTest(l.testId),
+              isMicrobiologyMcsTest(l.testId, store.settings),
             );
             const tableLines = filterFbcLinesForDisplay(
-              group.lines.filter((l) => !isMicrobiologyMcsTest(l.testId)),
+              group.lines.filter(
+                (l) => !isMicrobiologyMcsTest(l.testId, store.settings),
+              ),
             );
             return (
               <div key={group.id}>
@@ -299,7 +301,7 @@ export function ResultSlipDocument({
                   <MicrobiologyResultsReport
                     key={line.testId}
                     testName={
-                      getTestById(line.testId)?.name ?? line.testId
+                      getTestById(line.testId, store.settings)?.name ?? line.testId
                     }
                     line={line}
                   />

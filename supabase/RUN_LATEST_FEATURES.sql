@@ -110,3 +110,19 @@ WHERE i.order_id = o.id
 -- 10) Structured microbiology (MCS) results on order lines
 ALTER TABLE public.order_test_lines
   ADD COLUMN IF NOT EXISTS microbiology_result jsonb;
+
+-- 11) Custom tests + catalogue test kinds (see RUN_CATALOGUE_BILLING_MICRO.sql for full script)
+ALTER TABLE public.lab_settings
+  ADD COLUMN IF NOT EXISTS custom_tests jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+DO $$ BEGIN
+  CREATE TYPE catalogue_test_kind AS ENUM (
+    'profile', 'quantitative', 'qualitative', 'microbiology'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE public.catalogue_tests
+  ADD COLUMN IF NOT EXISTS test_kind catalogue_test_kind,
+  ADD COLUMN IF NOT EXISTS constituent_test_ids text[],
+  ADD COLUMN IF NOT EXISTS result_style text;

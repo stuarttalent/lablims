@@ -71,10 +71,19 @@ export default function NewInvoicePage() {
     return [...new Set(ids)];
   }, [selected]);
 
-  const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
+  const pickableCatalogue = useMemo(
+    () => testsForOrderPicker(store.settings),
+    [store.settings],
+  );
 
   const preview = useMemo(() => {
-    const expandedIds = [...new Set(selectedIds.flatMap((id) => getTestById(id)?.constituentTestIds ?? [id]))];
+    const expandedIds = [
+      ...new Set(
+        selectedIds.flatMap(
+          (id) => getTestById(id, store.settings)?.constituentTestIds ?? [id],
+        ),
+      ),
+    ];
     const sub = expandedIds.reduce(
       (s, id) => s + resolveTestPrice(id, store.settings),
       0,

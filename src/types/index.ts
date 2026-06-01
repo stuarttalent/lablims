@@ -25,6 +25,12 @@ export type TestDepartment =
   | "Serology/Immunology"
   | "Molecular";
 
+export type TestKind =
+  | "profile"
+  | "quantitative"
+  | "qualitative"
+  | "microbiology";
+
 export interface CatalogueTest {
   id: string;
   name: string;
@@ -36,13 +42,15 @@ export interface CatalogueTest {
   price: number;
   referenceRange?: string;
   units?: string;
+  /** How results are entered and reported. */
+  testKind?: TestKind;
   /**
    * When true, hidden from the default new-order and invoice pickers —
    * add these lines via a panel template instead.
    */
   panelAnalyte?: boolean;
-  /** Structured result entry (e.g. culture & sensitivity). */
-  resultStyle?: "numeric" | "microbiology_mcs";
+  /** Structured result entry (e.g. culture & sensitivity, qualitative pick list). */
+  resultStyle?: "numeric" | "microbiology_mcs" | "qualitative";
   /**
    * Optional profile expansion list. When selected, these constituent tests are
    * added as individual order/result lines.
@@ -73,6 +81,8 @@ export interface ResultCommentRule {
 export interface CatalogueTestOverride {
   referenceBands?: ReferenceRangeBand[];
   defaultCommentRules?: ResultCommentRule[];
+  /** Override result entry style for built-in catalogue tests. */
+  testKind?: TestKind;
 }
 
 export interface Patient {
@@ -265,6 +275,8 @@ export interface LabSettings {
   letterheadA4PdfDataUrl?: string;
   /** Per-test rules: age/gender reference bands & default comment templates. */
   catalogueOverrides: Record<string, CatalogueTestOverride>;
+  /** Laboratory-defined tests (editable in Configure tests). */
+  customTests: CatalogueTest[];
 }
 
 export interface DemoStore {

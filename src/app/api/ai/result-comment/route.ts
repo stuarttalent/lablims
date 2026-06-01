@@ -3,6 +3,10 @@ import {
   formatGuidanceForSlip,
   produceClinicalGuidance,
 } from "@/lib/ai/clinical-guidance";
+import {
+  AI_RESULT_COMMENT_MAX_WORDS,
+  truncateToWords,
+} from "@/lib/truncate-words";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -15,7 +19,10 @@ export async function POST(req: Request) {
     }
 
     const { guidance, source } = await produceClinicalGuidance(body);
-    const comment = formatGuidanceForSlip(guidance);
+    const comment = truncateToWords(
+      formatGuidanceForSlip(guidance),
+      AI_RESULT_COMMENT_MAX_WORDS,
+    );
 
     return NextResponse.json({
       comment,

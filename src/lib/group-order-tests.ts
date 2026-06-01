@@ -1,6 +1,6 @@
-import { TEST_CATALOGUE } from "@/data/catalogue";
+import { getCatalogueTests } from "@/lib/catalogue-access";
 import { filterFbcLinesForDisplay } from "@/lib/fbc-differential";
-import type { CatalogueTest, OrderTestLine } from "@/types";
+import type { CatalogueTest, LabSettings, OrderTestLine } from "@/types";
 
 export type OrderTestGroup = {
   id: string;
@@ -17,9 +17,11 @@ const PROFILE_REPORT_TITLES: Record<string, string> = {
   "profile-lipid": "Lipid profile",
 };
 
-const PROFILE_TESTS = TEST_CATALOGUE.filter(
-  (t) => (t.constituentTestIds?.length ?? 0) > 0,
-);
+function profileTests(settings?: Pick<LabSettings, "customTests" | "catalogueOverrides">) {
+  return getCatalogueTests(settings).filter(
+    (t) => (t.constituentTestIds?.length ?? 0) > 0,
+  );
+}
 
 function profileTitle(profile: CatalogueTest): string {
   return PROFILE_REPORT_TITLES[profile.id] ?? profile.name.replace(/\s*profile.*$/i, "").trim();
@@ -36,11 +38,15 @@ function sortByConstituentOrder(
 }
 
 /** Groups order lines into profiles (FBC, U&E, etc.) with remaining tests by department. */
-export function groupOrderTests(lines: OrderTestLine[]): OrderTestGroup[] {
+export function groupOrderTests(
+  lines: OrderTestLine[],
+  settings?: Pick<LabSettings, "customTests" | "catalogueOverrides">,
+): OrderTestGroup[] {
   const groups: OrderTestGroup[] = [];
   const assigned = new Set<string>();
+  const catalogue = getCatalogueTests(settings);
 
-  for (const profile of PROFILE_TESTS) {
+  for (const profile of profileTests(settings)) {
     const constituents = profile.constituentTestIds ?? [];
     const memberLines = filterFbcLinesForDisplay(
       lines.filter((l) => constituents.includes(l.testId)),
@@ -61,7 +67,7 @@ export function groupOrderTests(lines: OrderTestLine[]): OrderTestGroup[] {
   const byDept = new Map<string, OrderTestLine[]>();
   for (const line of remaining) {
     const dep =
-      TEST_CATALOGUE.find((t) => t.id === line.testId)?.department ?? "Other";
+      catalogue.find((t) => t.id === line.testId)?.department ?? "Other";
     const arr = byDept.get(dep) ?? [];
     arr.push(line);
     byDept.set(dep, arr);
@@ -72,7 +78,7 @@ export function groupOrderTests(lines: OrderTestLine[]): OrderTestGroup[] {
       id: `standalone-${dep}`,
       title: dep,
       specimenType: deptLines[0]
-        ? (TEST_CATALOGUE.find((t) => t.id === deptLines[0].testId)?.sampleType ??
+        ? (catalogue.find((t) => t.id === deptLines[0].testId)?.sampleType ??
           "—")
         : "—",
       department: dep,

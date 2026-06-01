@@ -269,6 +269,7 @@ export function mapSettings(
     letterhead_a4_pdf_data_url: string | null;
     price_overrides: Record<string, number>;
     catalogue_overrides: LabSettings["catalogueOverrides"];
+    custom_tests?: LabSettings["customTests"] | null;
     store_version: number;
   } | null,
 ): LabSettings {
@@ -290,6 +291,7 @@ export function mapSettings(
     letterheadA4PdfDataUrl: row.letterhead_a4_pdf_data_url ?? undefined,
     priceOverrides: row.price_overrides ?? {},
     catalogueOverrides: row.catalogue_overrides ?? {},
+    customTests: Array.isArray(row.custom_tests) ? row.custom_tests : [],
   };
 }
 

@@ -33,6 +33,11 @@ import {
   parseMicrobiologyResult,
 } from "@/lib/microbiology";
 import { MicrobiologyResultEditor } from "@/components/results/microbiology-result-editor";
+import { getCatalogueOverride } from "@/lib/catalogue-access";
+import {
+  isQualitativeTest,
+  QUALITATIVE_RESULTS,
+} from "@/lib/test-kind";
 import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
 import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
 import type {
@@ -636,7 +641,7 @@ export default function ResultsWorkspacePage() {
           )}
         </CardHeader>
         <CardContent className="space-y-8">
-          {groupOrderTests(order.tests).map((group) => (
+          {groupOrderTests(order.tests, store.settings).map((group) => (
             <div key={group.id} className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/30 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-blue-200 pb-2">
                 <h3 className="text-sm font-bold text-blue-800">{group.title}</h3>
@@ -646,7 +651,8 @@ export default function ResultsWorkspacePage() {
               </div>
               <div className="space-y-6">
           {filterFbcLinesForDisplay(group.lines).map((line, idx) => {
-            const meta = getTestById(line.testId);
+            const meta = getTestById(line.testId, store.settings);
+            const testOverride = getCatalogueOverride(line.testId, store.settings);
             const suggestedRef = resolveReferenceRangeForPatient(
               line.testId,
               patient,
@@ -671,7 +677,8 @@ export default function ResultsWorkspacePage() {
             const rulesBrief = heuristicPreAuthSummary(issues);
             const displayLine = getDisplayLine(line, meta);
             const isEditingAuthorized = editingAuthorizedTestId === line.testId;
-            const isMicro = isMicrobiologyMcsTest(line.testId);
+            const isMicro = isMicrobiologyMcsTest(line.testId, store.settings);
+            const isQualitative = isQualitativeTest(meta, testOverride);
             const testLabel = fbcDisplayTestName(
               line.testId,
               meta?.name ?? line.testId,
@@ -748,6 +755,44 @@ export default function ResultsWorkspacePage() {
                         {microbiologyResultSummary(getDisplayMicro(line))}
                       </span>
                     </p>
+                  </div>
+                ) : isQualitative ? (
+                  <div className="rounded-xl border border-violet-200/80 bg-violet-50/20 p-4 dark:border-violet-900/50 dark:bg-violet-950/15">
+                    <div className="space-y-2">
+                      <Label>Qualitative result</Label>
+                      <Select
+                        disabled={lineFieldsDisabled(line)}
+                        value={displayLine.resultValue || ""}
+                        onValueChange={(v) =>
+                          v &&
+                          handleLineFieldChange(line, meta, { resultValue: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select result" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {QUALITATIVE_RESULTS.map((q) => (
+                            <SelectItem key={q} value={q}>
+                              {q}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <Label>Comment</Label>
+                      <Textarea
+                        disabled={lineFieldsDisabled(line)}
+                        rows={2}
+                        value={displayLine.comment ?? ""}
+                        onChange={(e) =>
+                          handleLineFieldChange(line, meta, {
+                            comment: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                 ) : (
                 <div
@@ -894,7 +939,7 @@ export default function ResultsWorkspacePage() {
 
                 <div className="mt-3 space-y-3">
                   <ResultAmendmentHistory amendments={line.amendments} />
-                  {prior && !isMicro ? (
+                  {prior && !isMicro && !isQualitative ? (
                     <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-3 space-y-2">
                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
                         Prior result (same patient &amp; test)

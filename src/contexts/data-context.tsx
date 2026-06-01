@@ -59,10 +59,13 @@ function syncError(action: string, err: unknown) {
   toast.error(`Could not save to cloud (${action}).`);
 }
 
-function expandSelectedTestIds(testIds: string[]): string[] {
+function expandSelectedTestIds(
+  testIds: string[],
+  settings: LabSettings,
+): string[] {
   const expanded = new Set<string>();
   for (const id of testIds) {
-    const test = getTestById(id);
+    const test = getTestById(id, settings);
     if (test?.constituentTestIds?.length) {
       for (const constituentId of test.constituentTestIds) {
         expanded.add(constituentId);
@@ -72,6 +75,34 @@ function expandSelectedTestIds(testIds: string[]): string[] {
     expanded.add(id);
   }
   return [...expanded];
+}
+
+function buildInvoiceForOrder(
+  order: LabOrder,
+  selectedTestIds: string[],
+  settings: LabSettings,
+  branchId?: string,
+): Invoice {
+  const uniqueTestIds = expandSelectedTestIds(selectedTestIds, settings);
+  const subtotal = uniqueTestIds.reduce(
+    (sum, tid) => sum + resolveTestPrice(tid, settings),
+    0,
+  );
+  return {
+    id: `inv-${Date.now().toString(36)}`,
+    invoiceNumber: randomInvoiceNo(),
+    branchId,
+    patientId: order.patientId,
+    orderId: order.id,
+    testIds: uniqueTestIds,
+    subtotal,
+    discount: 0,
+    tax: 0,
+    total: subtotal,
+    currency: "USD",
+    paymentStatus: "Unpaid",
+    createdAt: new Date().toISOString().slice(0, 10),
+  };
 }
 
 type DataContextValue = {
@@ -183,6 +214,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               ...defaults.settings.catalogueOverrides,
               ...(saved.settings.catalogueOverrides ?? {}),
             },
+            customTests: saved.settings.customTests ?? [],
           };
           let next: DemoStore = { ...saved, invoices: normalizedInvoices, settings };
           if (!settings.limsInstanceId) {
@@ -283,9 +315,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       input: Omit<LabOrder, "id" | "createdAt" | "tests"> & { testIds: string[] },
     ) => {
       let order: LabOrder | null = null;
+      let invoice: Invoice | null = null;
       commit((s) => {
         const id = `ORD-${Date.now().toString().slice(-8)}`;
-        const uniqueTestIds = expandSelectedTestIds(input.testIds);
+        const uniqueTestIds = expandSelectedTestIds(input.testIds, s.settings);
         const tests: OrderTestLine[] = uniqueTestIds.map((testId) => ({
           testId,
           resultStatus: "Draft",
@@ -305,12 +338,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           createdAt: new Date().toISOString().slice(0, 16),
           tests,
         };
-        return { ...s, orders: [...s.orders, order] };
+        invoice = buildInvoiceForOrder(
+          order,
+          input.testIds,
+          s.settings,
+          order.branchId,
+        );
+        return {
+          ...s,
+          orders: [...s.orders, order],
+          invoices: [...s.invoices, invoice],
+        };
       });
       const ctx = supabaseCtxRef.current;
       if (ctx && order) {
         try {
           await persistOrderInsert(ctx, order);
+          if (invoice) {
+            await persistInvoiceInsert(ctx, invoice);
+          }
         } catch (e) {
           syncError("add order", e);
         }
@@ -397,7 +443,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       let inv: Invoice | null = null;
       let createdOrder: LabOrder | null = null;
       commit((s) => {
-        const uniqueTestIds = expandSelectedTestIds(input.testIds);
+        const uniqueTestIds = expandSelectedTestIds(input.testIds, s.settings);
         const effectiveOrderId = input.orderId ?? `ORD-${Date.now().toString().slice(-8)}`;
         if (!input.orderId) {
           createdOrder = {
@@ -496,14 +542,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = useCallback(
     (patch: Partial<LabSettings>) => {
-      commit((s) => ({
-        ...s,
-        settings: { ...s.settings, ...patch },
-      }));
+      let nextCustom: LabSettings["customTests"] | undefined;
+      commit((s) => {
+        const next = { ...s.settings, ...patch };
+        nextCustom = patch.customTests ?? next.customTests;
+        return { ...s, settings: next };
+      });
       if (laboratoryId && useSupabase) {
         void persistSettingsUpdate(laboratoryId, patch).catch((e) =>
           syncError("update settings", e),
         );
+        if (patch.customTests) {
+          void import("@/lib/supabase/ensure-catalogue").then(({ ensureCatalogueTestsForLaboratory }) =>
+            ensureCatalogueTestsForLaboratory(laboratoryId, nextCustom).catch((e) =>
+              syncError("sync catalogue", e),
+            ),
+          );
+        }
       }
     },
     [commit, laboratoryId, useSupabase],

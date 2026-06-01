@@ -56,7 +56,10 @@ export default function NewOrderPage() {
     return [...new Set(ids)];
   }, [selected]);
 
-  const pickableCatalogue = useMemo(() => testsForOrderPicker(), []);
+  const pickableCatalogue = useMemo(
+    () => testsForOrderPicker(store.settings),
+    [store.settings],
+  );
 
   if (!user || !canCreateOrder(user.role)) {
     return (
@@ -96,7 +99,7 @@ export default function NewOrderPage() {
       notes: notes.trim() || undefined,
       testIds: selectedIds,
     });
-    toast.success("Laboratory order created.");
+    toast.success("Laboratory order and billing invoice created.");
     router.push(`/orders/${order.id}`);
   }
 
