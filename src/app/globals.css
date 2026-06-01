@@ -176,3 +176,8 @@
 #lablims-result-slip * {
   box-sizing: border-box;
 }
+
+#lablims-result-slip {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}

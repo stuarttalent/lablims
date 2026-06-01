@@ -134,7 +134,7 @@ export default function ResultSlipPage() {
 
       <div
         className={cn(
-          "result-slip-print-root flex justify-center overflow-auto py-6 print:py-0 print:overflow-visible",
+          "result-slip-print-root flex justify-center overflow-auto py-8 bg-slate-100/80 print:py-0 print:bg-white print:overflow-visible",
           viewMode === "pdf" && pdfBlobUrl ? "hidden print:block" : "block",
         )}
       >
