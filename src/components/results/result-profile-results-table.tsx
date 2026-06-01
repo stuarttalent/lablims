@@ -1,7 +1,21 @@
 "use client";
 
 import { getTestById } from "@/data/catalogue";
+import { FBC_ABS_TO_PCT } from "@/lib/fbc-differential";
 import type { OrderTestLine } from "@/types";
+
+function formatResultDisplay(line: OrderTestLine, lines: OrderTestLine[]): string {
+  const raw = line.resultValue?.trim();
+  if (!raw) return "—";
+
+  const pctId = FBC_ABS_TO_PCT[line.testId];
+  if (pctId) {
+    const pct = lines.find((l) => l.testId === pctId)?.resultValue?.trim();
+    if (pct) return `${raw} (${pct}%)`;
+  }
+
+  return raw;
+}
 
 function flagLabel(flag?: string): string {
   if (!flag || flag === "Normal") return "";
@@ -50,7 +64,7 @@ export function ResultProfileResultsTable({
               <td
                 className={`py-1 pr-2 ${abnormal ? "font-bold text-slate-900" : "text-slate-800"}`}
               >
-                {line.resultValue ?? "—"}
+                {formatResultDisplay(line, lines)}
               </td>
               <td className="py-1 pr-2 text-slate-700">
                 {line.units ?? meta?.units ?? "—"}

@@ -26,17 +26,20 @@ export const ORDER_TEMPLATES: OrderTemplate[] = [
       "t-fbc-rdw",
       "t-fbc-plt",
       "t-fbc-mpv",
-      // 3-part differential
+      // 3-part differential (% auto-calculated from #)
       "t-fbc-neut-pct",
+      "t-fbc-neut-abs",
       "t-fbc-lymph-pct",
+      "t-fbc-lymph-abs",
       "t-fbc-mono-pct",
+      "t-fbc-mono-abs",
     ],
   },
   {
     id: "fbc-5part",
     label: "Full Blood Count — 5-part diff",
     description:
-      "Same as 3-part, plus eosinophil and basophil percentages for a five-part differential.",
+      "Same as 3-part, plus eosinophil and basophil (# with auto %).",
     sampleTypeHint: "EDTA whole blood",
     testIds: [
       "t-fbc-wbc",
@@ -50,10 +53,15 @@ export const ORDER_TEMPLATES: OrderTemplate[] = [
       "t-fbc-plt",
       "t-fbc-mpv",
       "t-fbc-neut-pct",
+      "t-fbc-neut-abs",
       "t-fbc-lymph-pct",
+      "t-fbc-lymph-abs",
       "t-fbc-mono-pct",
+      "t-fbc-mono-abs",
       "t-fbc-eos-pct",
+      "t-fbc-eos-abs",
       "t-fbc-baso-pct",
+      "t-fbc-baso-abs",
     ],
   },
   {
