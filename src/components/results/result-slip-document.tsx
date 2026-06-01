@@ -1,6 +1,10 @@
 "use client";
 
-import { ResultProfileResultsTable } from "@/components/results/result-profile-results-table";
+import {
+  ResultProfileComments,
+  ResultProfileResultsTable,
+} from "@/components/results/result-profile-results-table";
+import { filterFbcLinesForDisplay } from "@/lib/fbc-differential";
 import { groupOrderTests } from "@/lib/group-order-tests";
 import { letterheadPdfToImage } from "@/lib/letterhead-image";
 import type { DemoStore, LabOrder, OrderTestLine, Patient } from "@/types";
@@ -266,19 +270,10 @@ export function ResultSlipDocument({
             <div key={group.id}>
               <ResultProfileResultsTable
                 title={group.title}
-                lines={group.lines}
+                lines={filterFbcLinesForDisplay(group.lines)}
                 specimenType={group.specimenType}
               />
-              {group.lines.map((line) =>
-                line.comment ? (
-                  <p
-                    key={`${line.testId}-c`}
-                    className="mt-1 border-l-2 border-slate-400 pl-2 text-[10px] text-slate-700"
-                  >
-                    <span className="font-semibold">Comment:</span> {line.comment}
-                  </p>
-                ) : null,
-              )}
+              <ResultProfileComments lines={group.lines} />
             </div>
           ))}
         </div>

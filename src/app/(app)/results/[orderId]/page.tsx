@@ -23,9 +23,8 @@ import { orderToAiCommentPayload } from "@/lib/ai-result-comment";
 import type { ClinicalGuidance } from "@/lib/ai/clinical-guidance-types";
 import { ClinicalGuidancePanel } from "@/components/results/clinical-guidance-panel";
 import {
-  computeFbcPercentagesFromAbsolutes,
-  isFbcAutoCalculatedPct,
-  shouldRecalculateFbcPercentages,
+  fbcDisplayTestName,
+  filterFbcLinesForDisplay,
 } from "@/lib/fbc-differential";
 import { findPriorResultForTest, heuristicDeltaSentence } from "@/lib/prior-results";
 import { computePreAuthIssues, heuristicPreAuthSummary } from "@/lib/pre-auth-checklist";
@@ -293,22 +292,6 @@ export default function ResultsWorkspacePage() {
         }
       }
 
-      if (shouldRecalculateFbcPercentages(line.testId)) {
-        const valueByTest = new Map(
-          order.tests.map((t) => [t.testId, t.resultValue ?? ""]),
-        );
-        valueByTest.set(line.testId, nextPatch.resultValue ?? line.resultValue ?? "");
-        for (const upd of computeFbcPercentagesFromAbsolutes(
-          valueByTest,
-          inferFlagFromResultRange,
-        )) {
-          updateOrderLine(order.id, upd.testId, {
-            resultValue: upd.resultValue,
-            comment: upd.comment,
-            flag: upd.flag,
-          });
-        }
-      }
     }
   }
 
@@ -595,7 +578,7 @@ export default function ResultsWorkspacePage() {
                 </span>
               </div>
               <div className="space-y-6">
-          {group.lines.map((line, idx) => {
+          {filterFbcLinesForDisplay(group.lines).map((line, idx) => {
             const meta = getTestById(line.testId);
             const suggestedRef = resolveReferenceRangeForPatient(
               line.testId,
@@ -621,8 +604,10 @@ export default function ResultsWorkspacePage() {
             const rulesBrief = heuristicPreAuthSummary(issues);
             const displayLine = getDisplayLine(line, meta);
             const isEditingAuthorized = editingAuthorizedTestId === line.testId;
-            const testLabel = meta?.name ?? line.testId;
-            const autoPct = isFbcAutoCalculatedPct(line.testId);
+            const testLabel = fbcDisplayTestName(
+              line.testId,
+              meta?.name ?? line.testId,
+            );
             return (
               <div key={line.testId}>
                 {idx > 0 ? <Separator className="mb-6" /> : null}
@@ -694,7 +679,7 @@ export default function ResultsWorkspacePage() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Result</Label>
                     <Input
-                      disabled={lineFieldsDisabled(line) || autoPct}
+                      disabled={lineFieldsDisabled(line)}
                       value={displayLine.resultValue ?? ""}
                       onChange={(e) =>
                         handleLineFieldChange(line, meta, {
@@ -702,12 +687,6 @@ export default function ResultsWorkspacePage() {
                         })
                       }
                     />
-                    {autoPct ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        Percentage is calculated from the matching absolute (#) count and
-                        WBC.
-                      </p>
-                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <Label>Units</Label>

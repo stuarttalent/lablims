@@ -1,4 +1,5 @@
 import { TEST_CATALOGUE } from "@/data/catalogue";
+import { filterFbcLinesForDisplay } from "@/lib/fbc-differential";
 import type { CatalogueTest, OrderTestLine } from "@/types";
 
 export type OrderTestGroup = {
@@ -41,9 +42,12 @@ export function groupOrderTests(lines: OrderTestLine[]): OrderTestGroup[] {
 
   for (const profile of PROFILE_TESTS) {
     const constituents = profile.constituentTestIds ?? [];
-    const memberLines = lines.filter((l) => constituents.includes(l.testId));
+    const memberLines = filterFbcLinesForDisplay(
+      lines.filter((l) => constituents.includes(l.testId)),
+    );
     if (memberLines.length === 0) continue;
     for (const line of memberLines) assigned.add(line.testId);
+    for (const id of constituents) assigned.add(id);
     groups.push({
       id: profile.id,
       title: profileTitle(profile),

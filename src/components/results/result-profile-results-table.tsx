@@ -1,21 +1,12 @@
 "use client";
 
 import { getTestById } from "@/data/catalogue";
-import { FBC_ABS_TO_PCT } from "@/lib/fbc-differential";
+import {
+  fbcDisplayTestName,
+  formatFbcDifferentialResult,
+  isFbcAutoComment,
+} from "@/lib/fbc-differential";
 import type { OrderTestLine } from "@/types";
-
-function formatResultDisplay(line: OrderTestLine, lines: OrderTestLine[]): string {
-  const raw = line.resultValue?.trim();
-  if (!raw) return "—";
-
-  const pctId = FBC_ABS_TO_PCT[line.testId];
-  if (pctId) {
-    const pct = lines.find((l) => l.testId === pctId)?.resultValue?.trim();
-    if (pct) return `${raw} (${pct}%)`;
-  }
-
-  return raw;
-}
 
 function flagLabel(flag?: string): string {
   if (!flag || flag === "Normal") return "";
@@ -42,44 +33,69 @@ export function ResultProfileResultsTable({
           Specimen type : {specimenType}
         </span>
       </div>
-    <table className="w-full border-collapse text-[11px] print:text-[12pt]">
-      <thead>
-        <tr className="border-b border-slate-300 text-left text-slate-700">
-          <th className="py-1.5 pr-2 font-semibold w-[38%]">Test</th>
-          <th className="py-1.5 pr-2 font-semibold w-[14%]">Result</th>
-          <th className="py-1.5 pr-2 font-semibold w-[14%]">Unit</th>
-          <th className="py-1.5 pr-2 font-semibold w-[8%]">Flag</th>
-          <th className="py-1.5 font-semibold">Range</th>
-        </tr>
-      </thead>
-      <tbody className="font-mono text-[11px] print:text-[12pt]">
-        {lines.map((line) => {
-          const meta = getTestById(line.testId);
-          const abnormal = line.flag && line.flag !== "Normal";
-          return (
-            <tr key={line.testId} className="border-b border-slate-100">
-              <td className="py-1 pr-2 font-sans font-medium text-slate-900">
-                {meta?.name ?? line.testId}
-              </td>
-              <td
-                className={`py-1 pr-2 ${abnormal ? "font-bold text-slate-900" : "text-slate-800"}`}
-              >
-                {formatResultDisplay(line, lines)}
-              </td>
-              <td className="py-1 pr-2 text-slate-700">
-                {line.units ?? meta?.units ?? "—"}
-              </td>
-              <td className="py-1 pr-2 font-bold text-slate-900">
-                {flagLabel(line.flag)}
-              </td>
-              <td className="py-1 text-slate-600 font-sans">
-                {line.referenceRange ?? meta?.referenceRange ?? "—"}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+      <table className="w-full border-collapse text-[11px] print:text-[12pt]">
+        <thead>
+          <tr className="border-b border-slate-300 text-left text-slate-700">
+            <th className="py-1.5 pr-2 font-semibold w-[38%]">Test</th>
+            <th className="py-1.5 pr-2 font-semibold w-[14%]">Result</th>
+            <th className="py-1.5 pr-2 font-semibold w-[14%]">Unit</th>
+            <th className="py-1.5 pr-2 font-semibold w-[8%]">Flag</th>
+            <th className="py-1.5 font-semibold">Range</th>
+          </tr>
+        </thead>
+        <tbody className="font-mono text-[11px] print:text-[12pt]">
+          {lines.map((line) => {
+            const meta = getTestById(line.testId);
+            const abnormal = line.flag && line.flag !== "Normal";
+            const testName = fbcDisplayTestName(
+              line.testId,
+              meta?.name ?? line.testId,
+            );
+            return (
+              <tr key={line.testId} className="border-b border-slate-100">
+                <td className="py-1 pr-2 font-sans font-medium text-slate-900">
+                  {testName}
+                </td>
+                <td
+                  className={`py-1 pr-2 ${abnormal ? "font-bold text-slate-900" : "text-slate-800"}`}
+                >
+                  {formatFbcDifferentialResult(line, lines)}
+                </td>
+                <td className="py-1 pr-2 text-slate-700">
+                  {line.units ?? meta?.units ?? "—"}
+                </td>
+                <td className="py-1 pr-2 font-bold text-slate-900">
+                  {flagLabel(line.flag)}
+                </td>
+                <td className="py-1 text-slate-600 font-sans">
+                  {line.referenceRange ?? meta?.referenceRange ?? "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
+  );
+}
+
+export function ResultProfileComments({
+  lines,
+}: {
+  lines: OrderTestLine[];
+}) {
+  return (
+    <>
+      {lines.map((line) =>
+        line.comment && !isFbcAutoComment(line.comment) ? (
+          <p
+            key={`${line.testId}-c`}
+            className="mt-1 border-l-2 border-slate-400 pl-2 text-[10px] text-slate-700"
+          >
+            <span className="font-semibold">Comment:</span> {line.comment}
+          </p>
+        ) : null,
+      )}
+    </>
   );
 }
