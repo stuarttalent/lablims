@@ -134,28 +134,43 @@ export default function ResultSlipPage() {
 
       <div
         className={cn(
-          "result-slip-print-root flex justify-center overflow-auto py-8 bg-slate-100/80 print:py-0 print:bg-white print:overflow-visible",
-          viewMode === "pdf" && pdfBlobUrl ? "hidden print:block" : "block",
+          "result-slip-print-root no-print",
+          viewMode === "pdf" && pdfBlobUrl ? "hidden" : "block",
         )}
       >
+        <div className="result-slip-preview-stage">
+          <ResultSlipDocument
+            order={order}
+            patient={patient}
+            store={store}
+            onReady={() => setSlipAssetsReady(true)}
+          />
+        </div>
+        <p className="text-center text-[11px] text-muted-foreground mt-2 px-4">
+          A4 (210 × 297 mm) · 1 in (25.4 mm) margins on all sides
+        </p>
+      </div>
+
+      {/* Printable copy for browser Print — same A4 layout */}
+      <div className="hidden print:block result-slip-print-root">
         <ResultSlipDocument
           order={order}
           patient={patient}
           store={store}
-          onReady={() => setSlipAssetsReady(true)}
         />
       </div>
 
       {viewMode === "pdf" ? (
-        <div className="rounded-xl border bg-card p-3 no-print min-h-[70vh]">
+        <div className="no-print min-h-[50vh]">
           {pdfBlobUrl ? (
-            <iframe
-              title={`Result slip ${order.id}`}
-              src={pdfBlobUrl}
-              className="w-full min-h-[70vh] rounded-lg border-0"
-            />
+            <div className="result-slip-pdf-frame">
+              <iframe
+                title={`Result slip ${order.id}`}
+                src={pdfBlobUrl}
+              />
+            </div>
           ) : (
-            <div className="min-h-[40vh] grid place-items-center text-sm text-muted-foreground">
+            <div className="min-h-[40vh] grid place-items-center text-sm text-muted-foreground rounded-xl border bg-card mx-4">
               {isGeneratingPdf
                 ? "Building PDF from report…"
                 : "PDF not ready — switch to Report view or click Rebuild PDF."}

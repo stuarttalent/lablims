@@ -14,15 +14,7 @@ import type { DemoStore, LabOrder, OrderTestLine, Patient } from "@/types";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { buildResultVerificationToken } from "@/lib/verification-token";
-
-/** A4 page with 1 inch (2.54 cm) margins on all sides. */
-const SLIP = {
-  page: "w-full max-w-[210mm] min-h-[297mm] mx-auto",
-  pad: "p-[25.4mm]",
-  printPage:
-    "print:w-[210mm] print:min-h-[297mm] print:max-w-none print:mx-auto print:rounded-none",
-  printPad: "print:p-[25.4mm]",
-} as const;
+import { A4_MARGIN_CSS } from "@/lib/result-slip-a4";
 
 function uniqueAttributionRows(tests: OrderTestLine[]): OrderTestLine[] {
   const seen = new Set<string>();
@@ -141,13 +133,17 @@ export function ResultSlipDocument({
       id="lablims-result-slip"
       data-has-pdf-letterhead={hasA4Letterhead ? "true" : "false"}
       className={[
-        "relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-slate-900 shadow-xl",
-        SLIP.page,
-        SLIP.printPage,
-        "print:border-0 print:shadow-none",
+        "result-slip-a4-page relative overflow-hidden bg-white text-slate-900",
+        "rounded-2xl border border-slate-200/90 shadow-xl",
+        "print:rounded-none print:border-0 print:shadow-none",
         hasA4Letterhead ? "print:bg-transparent" : "print:bg-white",
         "print:[print-color-adjust:exact] print:[-webkit-print-color-adjust:exact]",
       ].join(" ")}
+      style={{
+        width: "210mm",
+        minHeight: "297mm",
+        boxSizing: "border-box",
+      }}
     >
       {letterheadImage ? (
         <div className="pointer-events-none absolute inset-0 z-0">
@@ -161,16 +157,13 @@ export function ResultSlipDocument({
       ) : null}
 
       <div
-        className={`h-1.5 bg-gradient-to-r from-teal-700 via-emerald-500 to-teal-600 ${hasA4Letterhead ? "opacity-0" : ""}`}
+        className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-700 via-emerald-500 to-teal-600 z-[1] ${hasA4Letterhead ? "opacity-0" : ""}`}
         aria-hidden
       />
 
       <div
-        className={[
-          "relative z-10 flex flex-col min-h-[calc(297mm-2*25.4mm)]",
-          SLIP.pad,
-          SLIP.printPad,
-        ].join(" ")}
+        className="relative z-10 flex min-h-[297mm] flex-col"
+        style={{ padding: A4_MARGIN_CSS, boxSizing: "border-box" }}
       >
         <header className="flex flex-col gap-6 border-b border-teal-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:break-inside-avoid">
           {!hasA4Letterhead ? (

@@ -165,11 +165,15 @@
   }
 }
 
+/* A4 result report: 210×297mm, 25.4mm (1in) padding on #lablims-result-slip */
+.result-slip-a4-page,
 #lablims-result-slip {
   width: 210mm;
   min-height: 297mm;
+  max-width: 210mm;
   margin: 0 auto;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 #lablims-result-slip,
@@ -180,4 +184,37 @@
 #lablims-result-slip {
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+.result-slip-preview-stage {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 1.5rem;
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+
+.result-slip-pdf-frame {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.result-slip-pdf-frame iframe {
+  width: 210mm;
+  height: 297mm;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: white;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 0.08);
+}
+
+@media (max-width: 900px) {
+  .result-slip-pdf-frame iframe {
+    width: min(210mm, calc(100vw - 3rem));
+    height: calc(min(210mm, calc(100vw - 3rem)) * 297 / 210);
+  }
 }
