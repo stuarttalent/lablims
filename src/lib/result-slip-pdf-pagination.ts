@@ -1,7 +1,9 @@
 import {
   A4_CONTENT_HEIGHT_MM,
+  A4_CONTENT_WIDTH_MM,
   A4_HEIGHT_MM,
   A4_MARGIN_CSS,
+  A4_MARGIN_MM,
   A4_WIDTH_MM,
   a4MmToPx,
 } from "@/lib/result-slip-a4";
@@ -23,8 +25,7 @@ function getMeasureHost(): HTMLElement {
     "position:fixed",
     "left:-9999px",
     "top:0",
-    `width:${A4_WIDTH_MM}mm`,
-    `padding:${A4_MARGIN_CSS}`,
+    `width:${A4_CONTENT_WIDTH_MM}mm`,
     "box-sizing:border-box",
     "opacity:1",
     "visibility:visible",
@@ -83,14 +84,19 @@ function createPageShell(letterheadFragment: HTMLElement | null): PageShell {
   }
 
   const inner = document.createElement("div");
+  inner.className = "result-slip-a4-page-inner";
   inner.style.cssText = [
     "position:relative",
     "z-index:10",
     "display:flex",
     "flex-direction:column",
-    "min-height:0",
     "flex:1",
-    `padding:${A4_MARGIN_CSS}`,
+    "min-height:0",
+    "overflow:hidden",
+    `padding-top:${A4_MARGIN_MM}mm`,
+    `padding-bottom:${A4_MARGIN_MM}mm`,
+    `padding-left:${A4_MARGIN_MM}mm`,
+    `padding-right:${A4_MARGIN_MM}mm`,
     "box-sizing:border-box",
   ].join(";");
   page.appendChild(inner);
