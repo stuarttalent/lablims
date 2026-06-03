@@ -1,4 +1,5 @@
 import type { CatalogueTest } from "@/types";
+import { EXTRA_CATALOGUE_TESTS } from "@/data/catalogue-extended";
 
 export {
   getCatalogueTests,
@@ -597,7 +598,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
   {
     id: "t-malaria",
-    name: "Malaria Parasite Test",
+    name: "Malaria Parasites",
     loincCode: "11277-1",
     department: "Haematology",
     sampleType: "EDTA whole blood / capillary",
@@ -728,7 +729,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
   {
     id: "t-hbsag",
-    name: "Hepatitis B Surface Antigen",
+    name: "Hepatitis B Surface Antigen (HBsAg)",
     loincCode: "5195-3",
     department: "Serology/Immunology",
     sampleType: "Serum",
@@ -739,7 +740,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
   {
     id: "t-hcv",
-    name: "Hepatitis C Antibody",
+    name: "Hepatitis C Virus (HCV)",
     loincCode: "16128-1",
     department: "Serology/Immunology",
     sampleType: "Serum",
@@ -794,7 +795,7 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
   },
   {
     id: "t-viral-load",
-    name: "HIV-1 RNA quantitative (viral load)",
+    name: "HIV Viral Load",
     loincCode: "10351-5",
     department: "Molecular",
     sampleType: "Plasma",
@@ -803,5 +804,6 @@ export const TEST_CATALOGUE: CatalogueTest[] = [
     referenceRange: "Target not detected / < 20 copies/mL",
     units: "copies/mL",
   },
+  ...EXTRA_CATALOGUE_TESTS,
 ];
 

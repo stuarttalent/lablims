@@ -12,9 +12,21 @@ export type OrderTestGroup = {
 
 const PROFILE_REPORT_TITLES: Record<string, string> = {
   "profile-fbc-5part": "Full Blood Count",
+  "profile-fbc": "Full Blood Count",
   "profile-ue": "U&E+Creatinine",
+  "profile-ue-creat": "Urea & Electrolytes",
   "profile-lft": "Liver function tests",
+  "profile-lft-named": "Liver Function Tests",
   "profile-lipid": "Lipid profile",
+  "profile-cardiac-enzymes": "Cardiac Enzymes",
+  "profile-tft": "Thyroid Function Tests",
+  "profile-female-hormones": "Female Hormone Profile",
+  "profile-hepatitis-b": "Hepatitis B Profile",
+  "profile-syphilis": "Syphilis",
+  "profile-torch": "TORCH Screen",
+  "profile-sti-screen": "STI Screen",
+  "profile-tcell": "T-Cell Profile",
+  "profile-fluid-mcs-biochem": "Fluid M/C/S + Biochemistry",
 };
 
 function profileTests(settings?: Pick<LabSettings, "customTests" | "catalogueOverrides">) {
