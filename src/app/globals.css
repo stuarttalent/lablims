@@ -186,6 +186,15 @@
   -webkit-print-color-adjust: exact;
 }
 
+/* Classic laboratory report (Daylight-style) */
+.result-slip-daylight {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.result-slip-daylight .font-mono {
+  font-family: "Courier New", Courier, ui-monospace, monospace;
+}
+
 .result-slip-preview-stage {
   display: flex;
   justify-content: center;
