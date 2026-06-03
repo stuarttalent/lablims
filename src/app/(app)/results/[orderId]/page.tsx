@@ -1,7 +1,7 @@
 "use client";
 
 import { getTestById } from "@/data/catalogue";
-import { groupOrderTests } from "@/lib/group-order-tests";
+import { groupOrderTests, type OrderTestGroup } from "@/lib/group-order-tests";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -371,6 +371,95 @@ export default function ResultsWorkspacePage() {
     });
   }
 
+  function submitLinesForAuthorization(testIds: string[]) {
+    if (!user || !order) return;
+    const idSet = new Set(testIds);
+    let count = 0;
+    const next = order.tests.map((l) => {
+      if (!idSet.has(l.testId) || isAuthorizedResultLine(l)) return l;
+      if (l.resultStatus === "Pending Verification") return l;
+      count++;
+      return {
+        ...l,
+        resultStatus: "Pending Verification" as LineResultStatus,
+        enteredBy: user.name,
+        enteredByCredential: user.professionalCredential,
+      };
+    });
+    if (count === 0) {
+      toast.message("Nothing to submit in this group.");
+      return;
+    }
+    for (const testId of testIds) {
+      const line = order.tests.find((t) => t.testId === testId);
+      if (!line || isAuthorizedResultLine(line)) continue;
+      if (line.resultStatus === "Pending Verification") continue;
+      updateOrderLine(order.id, testId, {
+        resultStatus: "Pending Verification",
+        enteredBy: user.name,
+        enteredByCredential: user.professionalCredential,
+      });
+    }
+    updateOrder(order.id, { status: syncOrderStatusFromLines(next) });
+    toast.success(
+      count === 1
+        ? "Submitted for authorization."
+        : `Submitted ${count} results for authorization.`,
+    );
+  }
+
+  function authorizeLines(testIds: string[]) {
+    if (!user || !order || !canVerifyResults(user.role)) return;
+    const idSet = new Set(testIds);
+    const verificationDate = new Date().toISOString().slice(0, 10);
+    let count = 0;
+    const next = order.tests.map((l) => {
+      if (!idSet.has(l.testId) || l.resultStatus !== "Pending Verification") {
+        return l;
+      }
+      count++;
+      return {
+        ...l,
+        resultStatus: "Released" as LineResultStatus,
+        verifiedBy: user.name,
+        verifiedByCredential: user.professionalCredential,
+        verificationDate,
+      };
+    });
+    if (count === 0) {
+      toast.message("No results pending authorization in this group.");
+      return;
+    }
+    for (const testId of testIds) {
+      const line = order.tests.find((t) => t.testId === testId);
+      if (!line || line.resultStatus !== "Pending Verification") continue;
+      updateOrderLine(order.id, testId, {
+        resultStatus: "Released",
+        verifiedBy: user.name,
+        verifiedByCredential: user.professionalCredential,
+        verificationDate,
+      });
+    }
+    updateOrder(order.id, { status: syncOrderStatusFromLines(next) });
+    toast.success(
+      count === 1
+        ? "Result authorized and released."
+        : `Authorized ${count} results.`,
+    );
+  }
+
+  function groupBulkActions(group: OrderTestGroup, displayLines: OrderTestLine[]) {
+    const testIds = displayLines.map((l) => l.testId);
+    const canSubmit = displayLines.some(
+      (l) =>
+        !isAuthorizedResultLine(l) && l.resultStatus !== "Pending Verification",
+    );
+    const canAuthorize = displayLines.some(
+      (l) => l.resultStatus === "Pending Verification",
+    );
+    return { testIds, canSubmit, canAuthorize, useBulk: displayLines.length > 1 };
+  }
+
   function saveAuthorizedEdit(line: OrderTestLine, testName: string) {
     if (!user || !order) return;
     if (isMicrobiologyMcsTest(line.testId)) {
@@ -641,16 +730,44 @@ export default function ResultsWorkspacePage() {
           )}
         </CardHeader>
         <CardContent className="space-y-8">
-          {groupOrderTests(order.tests, store.settings).map((group) => (
+          {groupOrderTests(order.tests, store.settings).map((group) => {
+            const displayLines = filterFbcLinesForDisplay(group.lines);
+            const bulk = groupBulkActions(group, displayLines);
+            return (
             <div key={group.id} className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/30 p-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-blue-200 pb-2">
-                <h3 className="text-sm font-bold text-blue-800">{group.title}</h3>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Specimen: {group.specimenType}
-                </span>
+              <div className="flex flex-col gap-3 border-b border-blue-200 pb-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-blue-800">{group.title}</h3>
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Specimen: {group.specimenType}
+                  </span>
+                </div>
+                {bulk.useBulk && !readOnly && user ? (
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {canEnterResults(user.role) && bulk.canSubmit ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => submitLinesForAuthorization(bulk.testIds)}
+                      >
+                        Submit for authorization
+                      </Button>
+                    ) : null}
+                    {canVerifyResults(user.role) && bulk.canAuthorize ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => authorizeLines(bulk.testIds)}
+                      >
+                        Authorize
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-6">
-          {filterFbcLinesForDisplay(group.lines).map((line, idx) => {
+          {displayLines.map((line, idx) => {
             const meta = getTestById(line.testId, store.settings);
             const testOverride = getCatalogueOverride(line.testId, store.settings);
             const suggestedRef = resolveReferenceRangeForPatient(
@@ -1062,93 +1179,32 @@ export default function ResultsWorkspacePage() {
                       </div>
                     ) : null}
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {canEnterResults(user.role) &&
-                        !isAuthorizedResultLine(line) && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              updateOrderLine(order.id, line.testId, {
-                                resultStatus: "Draft",
-                                enteredBy: user.name,
-                                enteredByCredential: user.professionalCredential,
-                              });
-                              toast.message("Draft saved");
-                            }}
-                          >
-                            Save entered result
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              updateOrderLine(order.id, line.testId, {
-                                resultStatus: "Pending Verification",
-                                enteredBy: user.name,
-                                enteredByCredential: user.professionalCredential,
-                              });
-                              const next = order.tests.map((l) =>
-                                l.testId === line.testId
-                                  ? {
-                                      ...l,
-                                      resultStatus:
-                                        "Pending Verification" as LineResultStatus,
-                                      enteredBy: user.name,
-                                      enteredByCredential:
-                                        user.professionalCredential,
-                                    }
-                                  : l,
-                              );
-                              updateOrder(order.id, {
-                                status: syncOrderStatusFromLines(next),
-                              });
-                              toast.success("Submitted for authorization.");
-                            }}
-                          >
-                            Submit for authorization
-                          </Button>
-                        </>
-                      )}
-                      {canVerifyResults(user.role) &&
-                        line.resultStatus === "Pending Verification" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              const verifiedBy = user.name;
-                              const verifiedByCredential =
-                                user.professionalCredential;
-                              const verificationDate = new Date()
-                                .toISOString()
-                                .slice(0, 10);
-                              updateOrderLine(order.id, line.testId, {
-                                resultStatus: "Released",
-                                verifiedBy,
-                                verifiedByCredential,
-                                verificationDate,
-                              });
-                              const next = order.tests.map((l) =>
-                                l.testId === line.testId
-                                  ? {
-                                      ...l,
-                                      resultStatus: "Released" as LineResultStatus,
-                                      verifiedBy,
-                                      verifiedByCredential,
-                                      verificationDate,
-                                    }
-                                  : l,
-                              );
-                              updateOrder(order.id, {
-                                status: syncOrderStatusFromLines(next),
-                              });
-                              toast.success("Result authorized and released.");
-                            }}
-                          >
-                            Authorize
-                          </Button>
-                        )}
-                    </div>
+                    {!bulk.useBulk ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {canEnterResults(user.role) &&
+                          !isAuthorizedResultLine(line) &&
+                          line.resultStatus !== "Pending Verification" && (
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                submitLinesForAuthorization([line.testId])
+                              }
+                            >
+                              Submit for authorization
+                            </Button>
+                          )}
+                        {canVerifyResults(user.role) &&
+                          line.resultStatus === "Pending Verification" && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => authorizeLines([line.testId])}
+                            >
+                              Authorize
+                            </Button>
+                          )}
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -1156,7 +1212,8 @@ export default function ResultsWorkspacePage() {
           })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
