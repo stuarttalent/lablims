@@ -109,9 +109,9 @@ export default function ResultSlipPage() {
         </div>
       </div>
 
-      {/* Off-screen report used only for PDF capture (must stay laid out, not opacity-0) */}
+      {/* In-viewport but hidden: full 210mm layout for PDF capture */}
       <div
-        className="result-slip-print-root fixed top-0 -left-[220mm] w-[210mm] overflow-hidden pointer-events-none"
+        className="result-slip-print-root fixed left-0 top-0 z-[-1] w-[210mm] min-w-[210mm] max-w-[210mm] overflow-visible opacity-[0.01] pointer-events-none"
         aria-hidden
       >
         <ResultSlipDocument

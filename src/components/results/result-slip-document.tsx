@@ -5,28 +5,16 @@ import {
   ResultProfileResultsTable,
 } from "@/components/results/result-profile-results-table";
 import { MicrobiologyResultsReport } from "@/components/results/microbiology-results-report";
-import {
-  ResultInfoBox,
-  ResultInfoLine,
-} from "@/components/results/result-slip-info-box";
 import { getTestById } from "@/data/catalogue";
 import { filterFbcLinesForDisplay } from "@/lib/fbc-differential";
 import { groupOrderTests } from "@/lib/group-order-tests";
 import { isMicrobiologyMcsTest } from "@/lib/microbiology";
 import { letterheadPdfToImage } from "@/lib/letterhead-image";
 import { A4_MARGIN_CSS } from "@/lib/result-slip-a4";
-import {
-  clinicalDataText,
-  formatSlipDateTime,
-  paymentMethodLabel,
-  requestedTestsLabel,
-} from "@/lib/result-slip-meta";
-import { buildResultVerificationToken } from "@/lib/verification-token";
 import type { DemoStore, LabOrder, OrderTestLine, Patient } from "@/types";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-
-const REPORT_BLUE = "#1a4d8f";
+import { buildResultVerificationToken } from "@/lib/verification-token";
 
 function uniqueAttributionRows(tests: OrderTestLine[]): OrderTestLine[] {
   const seen = new Set<string>();
@@ -34,7 +22,9 @@ function uniqueAttributionRows(tests: OrderTestLine[]): OrderTestLine[] {
   for (const line of tests) {
     const key = [
       line.enteredBy ?? "",
+      line.enteredByCredential ?? "",
       line.verifiedBy ?? "",
+      line.verifiedByCredential ?? "",
       line.verificationDate ?? "",
     ].join("\u001f");
     if (seen.has(key)) continue;
@@ -67,9 +57,9 @@ export function ResultSlipDocument({
     const lims = store.settings.limsInstanceId ?? "";
     const verifyUrl = `${origin}/verify/${encodeURIComponent(order.id)}?v=${buildResultVerificationToken(order.id, order.createdAt, lims)}`;
     QRCode.toDataURL(verifyUrl, {
-      width: 96,
-      margin: 0,
-      color: { dark: REPORT_BLUE, light: "#ffffff" },
+      width: 160,
+      margin: 1,
+      color: { dark: "#0c3929", light: "#ffffff" },
       errorCorrectionLevel: "M",
     })
       .then((dataUrl) => {
@@ -131,29 +121,27 @@ export function ResultSlipDocument({
   }, [letterheadResolved, onReady]);
 
   const resultGroups = groupOrderTests(order.tests, store.settings);
-  const reportDate = formatSlipDateTime(new Date().toISOString());
-  const collectionDate = formatSlipDateTime(order.collectionDate);
+  const reportDate = new Date().toISOString().slice(0, 10);
+  const released =
+    order.status === "Released" ||
+    order.tests.some((l) => l.resultStatus === "Released");
   const hasA4Letterhead = Boolean(letterheadImage || letterheadPdfUrl);
   const attributionRows = uniqueAttributionRows(order.tests);
-  const primaryEntered = attributionRows.find((l) => l.enteredBy)?.enteredBy;
-  const primaryAuthorized = attributionRows.find((l) => l.verifiedBy)?.verifiedBy;
-  const requestedTests = requestedTestsLabel(order, store.settings);
-  const payment = paymentMethodLabel(store, order, patient);
-  const clinical = clinicalDataText(order, patient);
-  const ageLabel = patient ? `${patient.age} years` : "—";
 
   return (
     <div
       id="lablims-result-slip"
       data-has-pdf-letterhead={hasA4Letterhead ? "true" : "false"}
       className={[
-        "result-slip-a4-page result-slip-daylight relative overflow-hidden bg-white text-neutral-900",
-        hasA4Letterhead ? "print:bg-transparent" : "",
+        "result-slip-a4-page relative overflow-hidden bg-white text-slate-900",
+        "print:rounded-none print:border-0 print:shadow-none",
+        hasA4Letterhead ? "print:bg-transparent" : "print:bg-white",
         "print:[print-color-adjust:exact] print:[-webkit-print-color-adjust:exact]",
       ].join(" ")}
       style={{
         width: "210mm",
         minHeight: "297mm",
+        maxWidth: "210mm",
         boxSizing: "border-box",
       }}
     >
@@ -169,103 +157,138 @@ export function ResultSlipDocument({
       ) : null}
 
       <div
-        className="relative z-10 flex min-h-[297mm] flex-col font-sans"
+        className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-700 via-emerald-500 to-teal-600 z-[1] ${hasA4Letterhead ? "opacity-0" : ""}`}
+        aria-hidden
+      />
+
+      <div
+        className="relative z-10 flex min-h-[297mm] flex-col"
         style={{ padding: A4_MARGIN_CSS, boxSizing: "border-box" }}
       >
-        {!hasA4Letterhead ? (
-          <header className="print:break-inside-avoid">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                {store.settings.logoDataUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+        <header className="flex flex-col gap-6 border-b border-teal-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:break-inside-avoid">
+          {!hasA4Letterhead ? (
+            <div className="flex flex-1 flex-wrap items-start gap-5">
+              {store.settings.logoDataUrl ? (
+                <div className="flex h-[72px] w-36 shrink-0 items-center justify-center rounded-xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-2 shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={store.settings.logoDataUrl}
                     alt=""
-                    className="h-14 w-auto max-w-[48mm] object-contain shrink-0"
+                    className="max-h-full max-w-full object-contain"
                   />
-                ) : null}
-                <div>
-                  <h1
-                    className="m-0 text-[15pt] font-bold leading-tight"
-                    style={{ color: REPORT_BLUE }}
-                  >
-                    {store.settings.labName}
-                  </h1>
-                  {store.settings.tagline ? (
-                    <p
-                      className="m-0 mt-0.5 text-[9pt] font-semibold uppercase tracking-wide"
-                      style={{ color: REPORT_BLUE }}
-                    >
-                      {store.settings.tagline}
-                    </p>
-                  ) : null}
                 </div>
-              </div>
-              <div className="shrink-0 text-right text-[9pt] leading-snug max-w-[48%]">
-                <p
-                  className="m-0 whitespace-pre-line font-semibold"
-                  style={{ color: REPORT_BLUE }}
-                >
+              ) : (
+                <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-emerald-600 text-lg font-bold tracking-tight text-white shadow-md">
+                  {store.settings.labName
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((w) => w[0])
+                    .join("")}
+                </div>
+              )}
+              <div className="min-w-0 space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-teal-950">
+                  {store.settings.labName}
+                </h1>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-teal-600/90">
+                  {store.settings.tagline}
+                </p>
+                <p className="max-w-md text-[11px] leading-relaxed text-slate-600">
                   {store.settings.address}
                 </p>
-                <p className="m-0 mt-1 font-semibold" style={{ color: REPORT_BLUE }}>
-                  {store.settings.phone}
+                <p className="text-[11px] text-slate-600">
+                  Tel <span className="font-medium text-slate-800">{store.settings.phone}</span>
+                  {" · "}
+                  <span className="font-medium text-slate-800">{store.settings.email}</span>
                 </p>
-                <p className="m-0 font-semibold" style={{ color: REPORT_BLUE }}>
-                  {store.settings.email}
+                <p className="text-[10px] text-teal-700/80">
+                  Licence / registration: {store.settings.registrationNumber}
                 </p>
-                {qrSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrSrc}
-                    alt=""
-                    width={72}
-                    height={72}
-                    className="mt-2 ml-auto block"
-                  />
-                ) : null}
               </div>
             </div>
-            <div
-              className="mt-3 h-[3px] w-full"
-              style={{ backgroundColor: REPORT_BLUE }}
-              aria-hidden
-            />
-          </header>
-        ) : (
-          <div className="min-h-[22mm]" aria-hidden />
-        )}
+          ) : (
+            <div className="flex-1 min-h-[14mm]" aria-hidden />
+          )}
 
-        <section className="mt-4 space-y-2.5 print:break-inside-avoid">
-          <ResultInfoBox>
-            <ResultInfoLine
-              label="Patient Name"
-              value={patient?.fullName ?? order.patientId}
-            />
-            <ResultInfoLine label="Lab Number" value={order.id} />
-            <ResultInfoLine label="Payment Method(s)" value={payment} />
-            <ResultInfoLine label="Requested Test(s)" value={requestedTests} />
-          </ResultInfoBox>
+          <div className="flex shrink-0 flex-col items-end gap-3 sm:pl-4">
+            <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50 to-emerald-50/60 px-4 py-2.5 text-center shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-teal-800">
+                Official result report
+              </p>
+              <p className="mt-0.5 font-mono text-sm font-bold text-teal-950">
+                {order.id}
+              </p>
+              <p className="text-[10px] text-teal-700/90">Issued {reportDate}</p>
+            </div>
+            <div className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
+              {qrSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrSrc}
+                  width={120}
+                  height={120}
+                  alt={`Verify ${order.id}`}
+                  className="rounded-lg"
+                />
+              ) : (
+                <div className="size-[120px] rounded-lg bg-slate-50" />
+              )}
+              <p className="mt-1.5 max-w-[130px] text-center text-[9px] leading-snug text-slate-500">
+                Scan to verify this report
+              </p>
+            </div>
+          </div>
+        </header>
 
-          <ResultInfoBox>
-            <ResultInfoLine
-              label="Passport/ID Number"
-              value={patient?.id ?? "—"}
-            />
-            <ResultInfoLine label="Age" value={ageLabel} />
-            <ResultInfoLine label="Gender" value={patient?.gender ?? "—"} />
-            <ResultInfoLine label="DateTime Collected" value={collectionDate} />
-            <ResultInfoLine label="Report Date" value={reportDate} />
-            <ResultInfoLine label="Doctor Ref" value={order.requestingDoctor} />
-            <ResultInfoLine label="Contact No" value={patient?.phone ?? "—"} />
-          </ResultInfoBox>
-
-          <ResultInfoBox>
-            <ResultInfoLine label="Clinical data" value={clinical} />
-          </ResultInfoBox>
+        <section className="mt-6 grid gap-4 rounded-2xl border border-teal-100/80 bg-gradient-to-br from-slate-50/90 via-teal-50/30 to-emerald-50/20 p-5 sm:grid-cols-2 print:break-inside-avoid shadow-sm">
+          <div className="rounded-xl bg-white/70 p-4 ring-1 ring-teal-100/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+              Patient
+            </p>
+            <p className="mt-1.5 text-base font-semibold text-slate-900">
+              {patient?.fullName ?? order.patientId}
+            </p>
+            <dl className="mt-3 space-y-1.5 text-xs text-slate-600">
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-20 shrink-0">DOB</dt>
+                <dd className="font-medium text-slate-800">
+                  {patient?.dateOfBirth} · {patient?.gender} · {patient?.age} yrs
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-20 shrink-0">Phone</dt>
+                <dd className="font-medium text-slate-800">{patient?.phone ?? "—"}</dd>
+              </div>
+            </dl>
+          </div>
+          <div className="rounded-xl bg-white/70 p-4 ring-1 ring-teal-100/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+              Request
+            </p>
+            <dl className="mt-3 space-y-2 text-xs">
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-24 shrink-0">Priority</dt>
+                <dd className="font-medium text-slate-800">{order.priority}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-24 shrink-0">Sample</dt>
+                <dd className="font-medium text-slate-800">{order.sampleType}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-24 shrink-0">Collection</dt>
+                <dd className="font-medium text-slate-800">
+                  {order.collectionDate.replace("T", " ")}
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="text-teal-700/80 w-24 shrink-0">Referrer</dt>
+                <dd className="font-medium text-slate-800">{order.requestingDoctor}</dd>
+              </div>
+            </dl>
+          </div>
         </section>
 
-        <div className="mt-2 flex-1">
+        <div className="mt-7 space-y-6 flex-1">
           {resultGroups.map((group) => {
             const microLines = group.lines.filter((l) =>
               isMicrobiologyMcsTest(l.testId, store.settings),
@@ -285,15 +308,10 @@ export function ResultSlipDocument({
                   />
                 ) : null}
                 {tableLines.length === 0 && microLines.length > 0 ? (
-                  <div className="mt-4">
-                    <h3
-                      className="m-0 text-[12pt] font-bold tracking-tight"
-                      style={{ color: REPORT_BLUE }}
-                    >
-                      {group.title}
-                    </h3>
-                    <p className="mt-1 font-mono text-[10pt] uppercase">
-                      SPECIMEN TYPE : {group.specimenType.toUpperCase()}
+                  <div className="mb-3 rounded-t-xl bg-gradient-to-r from-teal-700 to-emerald-600 px-4 py-2.5">
+                    <h3 className="text-sm font-bold text-white">{group.title}</h3>
+                    <p className="text-[10px] text-teal-50/90">
+                      Specimen: {group.specimenType}
                     </p>
                   </div>
                 ) : null}
@@ -312,36 +330,101 @@ export function ResultSlipDocument({
           })}
         </div>
 
-        {order.includeAiCommentInReport && order.aiGeneratedComment ? (
-          <section className="mt-4 print:break-inside-avoid">
-            <h3
-              className="m-0 text-[11pt] font-bold"
-              style={{ color: REPORT_BLUE }}
-            >
-              Interpretive comments
+        <section className="mt-8 overflow-hidden rounded-2xl border border-teal-100 shadow-md print:break-inside-avoid">
+          <div className="bg-gradient-to-r from-teal-800 to-emerald-700 px-4 py-2.5">
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-white">
+              Result entry &amp; authorization
             </h3>
-            <p className="mt-1 font-mono text-[10pt] leading-relaxed whitespace-pre-wrap">
+          </div>
+          <div className="overflow-x-auto bg-white">
+            <table className="w-full min-w-[480px] text-[11px]">
+              <thead>
+                <tr className="border-b border-teal-100 bg-teal-50/80 text-left text-teal-900">
+                  <th className="px-3 py-2 font-semibold">Entered by</th>
+                  <th className="px-3 py-2 font-semibold">Credentials</th>
+                  <th className="px-3 py-2 font-semibold">Authorized by</th>
+                  <th className="px-3 py-2 font-semibold">Auth. credentials</th>
+                  <th className="px-3 py-2 font-semibold">Auth. date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributionRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-3 text-center text-slate-500">
+                      —
+                    </td>
+                  </tr>
+                ) : (
+                  attributionRows.map((line, idx) => (
+                    <tr
+                      key={`${line.enteredBy ?? ""}-${line.verifiedBy ?? ""}-${line.verificationDate ?? ""}-${idx}`}
+                      className={`border-b border-slate-100 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}`}
+                    >
+                      <td className="px-3 py-2 text-slate-800">{line.enteredBy ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {line.enteredByCredential ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-teal-900">
+                        {line.verifiedBy ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {line.verifiedByCredential ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {line.verificationDate ?? "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-teal-100 bg-gradient-to-r from-teal-50/50 to-emerald-50/30 px-4 py-3">
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                released
+                  ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200"
+                  : "bg-amber-100 text-amber-900 ring-1 ring-amber-200"
+              }`}
+            >
+              {released ? "Released to requester" : order.status}
+            </span>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-700">
+                Authorised signatory
+              </p>
+              <div className="mt-3 inline-block min-w-[200px] border-b-2 border-teal-400" />
+              <p className="mt-1 text-[10px] text-slate-500">
+                Signature · name · professional registration
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {order.includeAiCommentInReport && order.aiGeneratedComment ? (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-indigo-200/90 shadow-md print:break-inside-avoid">
+            <div className="bg-gradient-to-r from-indigo-700 to-violet-700 px-4 py-2.5">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-white">
+                Interpretive summary (AI-assisted)
+              </h3>
+            </div>
+            <div className="bg-gradient-to-b from-indigo-50/50 to-white px-5 py-4 text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
               {order.aiGeneratedComment}
+            </div>
+            <p className="border-t border-indigo-100 bg-indigo-50/40 px-5 py-2 text-[9px] text-indigo-800/80">
+              Decision support only — clinical correlation required; does not replace
+              professional judgment.
             </p>
           </section>
         ) : null}
 
-        <footer className="mt-6 space-y-2 border-t border-neutral-300 pt-3 font-mono text-[9.5pt] text-neutral-700 print:break-inside-avoid">
-          {primaryEntered ? (
-            <p className="m-0">
-              <span className="font-semibold text-[#1a4d8f]">Captured By:</span>{" "}
-              {primaryEntered}
-            </p>
-          ) : null}
-          {primaryAuthorized ? (
-            <p className="m-0">
-              <span className="font-semibold text-[#1a4d8f]">
-                Previously Authorised By:
-              </span>{" "}
-              {primaryAuthorized}
-            </p>
-          ) : null}
-          <p className="m-0 mt-2 text-[8.5pt] leading-snug">{store.settings.reportFooter}</p>
+        <footer className="mt-8 rounded-xl border border-teal-100 bg-gradient-to-br from-slate-50 to-teal-50/40 px-5 py-4 text-[10px] leading-relaxed text-slate-600">
+          <p className="font-medium text-teal-900">{store.settings.reportFooter}</p>
+          <p className="mt-2">
+            The QR code encodes a secure verification link for accession{" "}
+            <span className="font-mono font-semibold text-teal-800">{order.id}</span> on
+            the issuing laboratory system.
+          </p>
         </footer>
       </div>
     </div>
