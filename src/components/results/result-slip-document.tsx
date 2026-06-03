@@ -55,7 +55,10 @@ export function ResultSlipDocument({
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
     const lims = store.settings.limsInstanceId ?? "";
-    const verifyUrl = `${origin}/verify/${encodeURIComponent(order.id)}?v=${buildResultVerificationToken(order.id, order.createdAt, lims)}`;
+    const token = buildResultVerificationToken(order.id, order.createdAt, lims);
+    const verifyParams = new URLSearchParams({ v: token });
+    if (lims) verifyParams.set("lims", lims);
+    const verifyUrl = `${origin}/verify/${encodeURIComponent(order.id)}?${verifyParams.toString()}`;
     QRCode.toDataURL(verifyUrl, {
       width: 160,
       margin: 1,

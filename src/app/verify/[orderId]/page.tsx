@@ -1,6 +1,5 @@
 "use client";
 
-import { useData } from "@/contexts/data-context";
 import {
   Card,
   CardContent,
@@ -12,10 +11,34 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { CheckCircle2, FlaskConical, HelpCircle, Shield } from "lucide-react";
 import { LabLoader } from "@/components/ui/lab-loader";
-import { verifyResultToken } from "@/lib/verification-token";
+
+type VerifyLab = {
+  labName: string;
+  tagline?: string;
+  phone?: string;
+  email?: string;
+  registrationNumber?: string;
+};
+
+type VerifyOrder = {
+  id: string;
+  status: string;
+  collectionDate: string;
+  patientName: string | null;
+  tokenValid: boolean;
+  released: boolean;
+  verifiedBy: string | null;
+  verifiedOn: string | null;
+};
+
+type VerifyPayload = {
+  lab: VerifyLab;
+  order: VerifyOrder | null;
+  error?: string;
+};
 
 export default function PublicVerifyPage() {
   return (
@@ -36,42 +59,61 @@ function PublicVerifyInner() {
   const searchParams = useSearchParams();
   const orderId = decodeURIComponent(params.orderId ?? "");
   const v = searchParams.get("v");
-  const { store, hydrated } = useData();
+  const lims = searchParams.get("lims");
 
-  const order = store.orders.find((o) => o.id === orderId);
-  const patient = order
-    ? store.patients.find((p) => p.id === order.patientId)
-    : undefined;
+  const [payload, setPayload] = useState<VerifyPayload | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const instanceId = store.settings.limsInstanceId ?? "";
-  const tokenOk =
-    Boolean(order) &&
-    Boolean(v) &&
-    verifyResultToken(
-      order!.id,
-      order!.createdAt,
-      instanceId,
-      v,
-    );
+  useEffect(() => {
+    let cancelled = false;
 
-  const released =
-    order &&
-    tokenOk &&
-    (order.status === "Released" ||
-      order.tests.some((l) => l.resultStatus === "Released"));
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
+      setPayload(null);
 
-  const verifiedBy =
-    order?.tests.map((l) => l.verifiedBy).filter(Boolean)[0] ?? null;
-  const verifiedOn =
-    order?.tests.map((l) => l.verificationDate).filter(Boolean)[0] ?? null;
+      const qs = new URLSearchParams();
+      if (v) qs.set("v", v);
+      if (lims?.trim()) qs.set("lims", lims);
 
-  if (!hydrated) {
+      try {
+        const res = await fetch(
+          `/api/verify/${encodeURIComponent(orderId)}?${qs.toString()}`,
+          { cache: "no-store" },
+        );
+        const data = (await res.json()) as VerifyPayload & { error?: string };
+        if (!res.ok) {
+          throw new Error(data.error ?? "Verification lookup failed.");
+        }
+        if (!cancelled) setPayload(data);
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : "Verification lookup failed.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, v, lims]);
+
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40">
         <LabLoader message="Loading verification…" />
       </div>
     );
   }
+
+  const labName = payload?.lab.labName ?? "Laboratory";
+  const order = payload?.order ?? null;
+  const tokenOk = Boolean(order?.tokenValid);
+  const released = Boolean(order?.released);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-950/5 via-background to-background px-4 py-10">
@@ -80,10 +122,12 @@ function PublicVerifyInner() {
           <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
             <FlaskConical className="size-7" />
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {store.settings.labName}
-          </h1>
-          <p className="text-sm text-muted-foreground">Report verification</p>
+          <h1 className="text-xl font-semibold tracking-tight">{labName}</h1>
+          {payload?.lab.tagline ? (
+            <p className="text-sm text-muted-foreground">{payload.lab.tagline}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Report verification</p>
+          )}
         </div>
 
         <Card className="border-border shadow-md">
@@ -99,28 +143,38 @@ function PublicVerifyInner() {
             </div>
             <CardDescription>
               Linked from the QR code on official laboratory reports. Use it to
-              confirm accession details and workflow status when viewing from an
-              authorised workstation.
+              confirm accession details and workflow status.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            {!order ? (
+            {loadError ? (
+              <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-50">
+                <HelpCircle className="size-5 shrink-0" />
+                <div>
+                  <p className="font-medium">Could not verify</p>
+                  <p className="mt-1 text-xs leading-relaxed opacity-90">{loadError}</p>
+                </div>
+              </div>
+            ) : !order ? (
               <div className="space-y-3 text-muted-foreground">
                 <p>
-                  No matching accession was found on this device. That often
-                  happens when you open the link on a phone or computer that is
-                  not part of the laboratory network.
+                  No matching accession was found for{" "}
+                  <span className="font-medium text-foreground">{labName}</span>.
                 </p>
                 <p>
                   Compare the accession number above with the one printed on your
-                  report. For confirmation or questions, contact{" "}
-                  <span className="font-medium text-foreground">
-                    {store.settings.labName}
-                  </span>{" "}
-                  using the telephone number on your document.
+                  report. For confirmation, contact{" "}
+                  <span className="font-medium text-foreground">{labName}</span>
+                  {payload?.lab.phone ? (
+                    <>
+                      {" "}
+                      at <span className="font-medium text-foreground">{payload.lab.phone}</span>
+                    </>
+                  ) : null}
+                  .
                 </p>
               </div>
-            ) : order && !v ? (
+            ) : !v ? (
               <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-50">
                 <HelpCircle className="size-5 shrink-0" />
                 <div>
@@ -131,16 +185,16 @@ function PublicVerifyInner() {
                   </p>
                 </div>
               </div>
-            ) : order && v && !tokenOk ? (
+            ) : !tokenOk ? (
               <div className="space-y-3 text-muted-foreground">
                 <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-50">
                   <HelpCircle className="size-5 shrink-0" />
                   <div>
-                    <p className="font-medium">Could not confirm on this device</p>
+                    <p className="font-medium">Could not confirm this report</p>
                     <p className="mt-1 text-xs leading-relaxed opacity-90">
-                      The security code on the link does not match this
-                      workstation. Retain your printed report and contact the
-                      laboratory using the number shown on the document.
+                      The security code does not match records for {labName}. Retain
+                      your printed report and contact the laboratory using the number
+                      on the document.
                     </p>
                   </div>
                 </div>
@@ -153,9 +207,9 @@ function PublicVerifyInner() {
                     <div>
                       <p className="font-medium">Authenticity confirmed</p>
                       <p className="mt-1 text-xs leading-relaxed opacity-90">
-                        This accession and security code match our issuance
-                        records on this system. Compare patient name and
-                        collection date with your printed copy.
+                        This accession and security code match issuance records for{" "}
+                        {labName}. Compare patient name and collection date with your
+                        printed copy.
                       </p>
                     </div>
                   </div>
@@ -166,8 +220,8 @@ function PublicVerifyInner() {
                       <p className="font-medium">Report not yet finalised</p>
                       <p className="mt-1 text-xs leading-relaxed opacity-90">
                         Current workflow status:{" "}
-                        <strong>{order!.status}</strong>. If your paper shows a
-                        different stage, contact the laboratory.
+                        <strong>{order.status}</strong>. If your paper shows a
+                        different stage, contact {labName}.
                       </p>
                     </div>
                   </div>
@@ -176,24 +230,24 @@ function PublicVerifyInner() {
                 <dl className="grid gap-2 text-xs sm:grid-cols-2">
                   <div>
                     <dt className="text-muted-foreground">Patient</dt>
-                    <dd className="font-medium">{patient?.fullName ?? "—"}</dd>
+                    <dd className="font-medium">{order.patientName ?? "—"}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Collection</dt>
                     <dd className="font-medium">
-                      {order!.collectionDate.replace("T", " ").slice(0, 16)}
+                      {order.collectionDate.replace("T", " ").slice(0, 16)}
                     </dd>
                   </div>
-                  {verifiedBy ? (
+                  {order.verifiedBy ? (
                     <div>
                       <dt className="text-muted-foreground">Verified by</dt>
-                      <dd className="font-medium">{verifiedBy}</dd>
+                      <dd className="font-medium">{order.verifiedBy}</dd>
                     </div>
                   ) : null}
-                  {verifiedOn ? (
+                  {order.verifiedOn ? (
                     <div>
                       <dt className="text-muted-foreground">Verification date</dt>
-                      <dd className="font-medium">{verifiedOn}</dd>
+                      <dd className="font-medium">{order.verifiedOn}</dd>
                     </div>
                   ) : null}
                 </dl>
@@ -204,12 +258,11 @@ function PublicVerifyInner() {
               <p className="font-medium text-foreground">About this check</p>
               <ul className="mt-2 list-disc space-y-1 pl-4">
                 <li>
-                  The QR code contains your accession and a code bound to the
-                  laboratory system that issued the report.
+                  The QR code contains your accession, a laboratory identifier, and a
+                  code bound to the system that issued the report.
                 </li>
                 <li>
-                  Full validation always includes comparing details on your
-                  printed report with information provided directly by the lab.
+                  Laboratory details are loaded from {labName}&apos;s official records.
                 </li>
               </ul>
             </div>
