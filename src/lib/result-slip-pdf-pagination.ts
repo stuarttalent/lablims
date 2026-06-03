@@ -196,7 +196,7 @@ function packBlocks(
   };
 
   for (const block of blocks) {
-    const parts = splitBlockToFit(block, CONTENT_HEIGHT_PX);
+    const parts = splitBlockToFit(block.cloneNode(true) as HTMLElement, CONTENT_HEIGHT_PX);
     for (const part of parts) {
       const h = measureElement(part);
       if (h > CONTENT_HEIGHT_PX) {

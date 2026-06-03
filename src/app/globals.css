@@ -189,7 +189,11 @@
 #lablims-result-slip,
 #lablims-result-slip *,
 #lablims-result-slip-pdf-export,
-#lablims-result-slip-pdf-export * {
+#lablims-result-slip-pdf-export *,
+#lablims-result-slip-capture,
+#lablims-result-slip-capture *,
+#lablims-slip-capture-mount,
+#lablims-slip-capture-mount * {
   box-shadow: none !important;
 }
 

@@ -6,17 +6,14 @@ import {
   A4_WIDTH_MM,
   A4_WIDTH_PX,
 } from "@/lib/result-slip-a4";
-import {
-  buildPaginatedSlipExportRoot,
-  expectedExportHeightPx,
-} from "@/lib/result-slip-pdf-pagination";
 import { jsPDF } from "jspdf";
 
 type BuildResultSlipPdfOptions = {
   element: HTMLElement;
 };
 
-/** Ensure the slip element is laid out at full A4 width before raster capture. */
+const CAPTURE_MOUNT_ID = "lablims-slip-capture-mount";
+
 function prepareSlipForCapture(slip: HTMLElement): () => void {
   const prev = {
     width: slip.style.width,
@@ -39,37 +36,58 @@ function prepareSlipForCapture(slip: HTMLElement): () => void {
   };
 }
 
-function pngDataUrlToPdfBlob(dataUrl: string): Blob {
-  const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+function mountForCapture(content: HTMLElement): () => void {
+  document.getElementById(CAPTURE_MOUNT_ID)?.remove();
 
-  const imgProps = pdf.getImageProperties(dataUrl);
-  const imageWidth = pageWidth;
-  const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
-
-  let heightLeft = imageHeight;
-  let positionY = 0;
-
-  pdf.addImage(dataUrl, "PNG", 0, 0, imageWidth, imageHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0.5) {
-    positionY = -(imageHeight - heightLeft);
-    pdf.addPage("a4", "p");
-    pdf.addImage(dataUrl, "PNG", 0, positionY, imageWidth, imageHeight);
-    heightLeft -= pageHeight;
-  }
-
-  return pdf.output("blob");
+  const mount = document.createElement("div");
+  mount.id = CAPTURE_MOUNT_ID;
+  mount.setAttribute("aria-hidden", "true");
+  Object.assign(mount.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: `${A4_WIDTH_MM}mm`,
+    transform: "translateX(-110vw)",
+    zIndex: "2147483646",
+    opacity: "1",
+    visibility: "visible",
+    pointerEvents: "none",
+    background: "#ffffff",
+    boxSizing: "border-box",
+  });
+  mount.appendChild(content);
+  document.body.appendChild(mount);
+  return () => mount.remove();
 }
 
-async function captureElementPng(
-  slip: HTMLElement,
-  heightPx: number,
-): Promise<string> {
+async function waitForCaptureLayout(root: HTMLElement): Promise<void> {
+  const imgs = [...root.querySelectorAll("img")];
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) resolve();
+          else {
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }
+        }),
+    ),
+  );
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+
+function captureHeightPx(node: HTMLElement): number {
+  return Math.max(
+    A4_HEIGHT_PX,
+    Math.ceil(node.scrollHeight || node.offsetHeight || A4_HEIGHT_PX),
+  );
+}
+
+async function captureNodePng(node: HTMLElement): Promise<string> {
+  const heightPx = captureHeightPx(node);
   const { toPng } = await import("html-to-image");
-  return toPng(slip, {
+  return toPng(node, {
     cacheBust: true,
     pixelRatio: 2,
     width: A4_WIDTH_PX,
@@ -79,26 +97,21 @@ async function captureElementPng(
       width: `${A4_WIDTH_MM}mm`,
       minWidth: `${A4_WIDTH_MM}mm`,
       maxWidth: `${A4_WIDTH_MM}mm`,
-      margin: "0",
       opacity: "1",
       visibility: "visible",
       boxSizing: "border-box",
     },
-    filter: (node) => {
-      if (node instanceof HTMLElement && node.classList.contains("no-pdf")) {
-        return false;
-      }
+    filter: (n) => {
+      if (n instanceof HTMLElement && n.classList.contains("no-pdf")) return false;
       return true;
     },
   });
 }
 
-async function captureElementPngHtml2Canvas(
-  slip: HTMLElement,
-  heightPx: number,
-): Promise<string> {
+async function captureNodeHtml2Canvas(node: HTMLElement): Promise<string> {
   const html2canvas = (await import("html2canvas")).default;
-  const canvas = await html2canvas(slip, {
+  const heightPx = captureHeightPx(node);
+  const canvas = await html2canvas(node, {
     scale: 2,
     width: A4_WIDTH_PX,
     height: heightPx,
@@ -113,6 +126,57 @@ async function captureElementPngHtml2Canvas(
   return canvas.toDataURL("image/png", 1);
 }
 
+async function rasterizeNode(node: HTMLElement): Promise<string> {
+  try {
+    return await captureNodePng(node);
+  } catch (e1) {
+    console.warn("html-to-image capture failed:", e1);
+    return captureNodeHtml2Canvas(node);
+  }
+}
+
+/** Slice one tall capture into A4 pages (fallback when pagination is not used). */
+function pngDataUrlToPdfBlob(dataUrl: string): Blob {
+  const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const imgProps = pdf.getImageProperties(dataUrl);
+  const imageWidth = pageWidth;
+  const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
+
+  let heightLeft = imageHeight;
+  pdf.addImage(dataUrl, "PNG", 0, 0, imageWidth, imageHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft > 0.5) {
+    const positionY = -(imageHeight - heightLeft);
+    pdf.addPage("a4", "p");
+    pdf.addImage(dataUrl, "PNG", 0, positionY, imageWidth, imageHeight);
+    heightLeft -= pageHeight;
+  }
+
+  return pdf.output("blob");
+}
+
+async function buildPdfFromSlipClone(slip: HTMLElement): Promise<Blob> {
+  const clone = slip.cloneNode(true) as HTMLElement;
+  clone.id = "lablims-result-slip-capture";
+  clone.removeAttribute("data-has-pdf-letterhead");
+
+  const unmount = mountForCapture(clone);
+  try {
+    await waitForCaptureLayout(clone);
+    if (clone.offsetWidth < 100) {
+      throw new Error("Result slip is not laid out at full A4 width for capture.");
+    }
+    const dataUrl = await rasterizeNode(clone);
+    return pngDataUrlToPdfBlob(dataUrl);
+  } finally {
+    unmount();
+  }
+}
+
 /** Build an A4 PDF blob; slip element must already include 25.4mm margins in its layout. */
 export async function buildResultSlipPdfBlob({
   element,
@@ -124,55 +188,10 @@ export async function buildResultSlipPdfBlob({
 
   const restore = prepareSlipForCapture(slip);
 
-  const { exportRoot, pageCount } = buildPaginatedSlipExportRoot(slip);
-  const hasPageContent = [...exportRoot.querySelectorAll(".result-slip-a4-page")].some(
-    (page) => (page.lastElementChild as HTMLElement | null)?.childElementCount,
-  );
-  if (!hasPageContent) {
-    throw new Error("Result slip has no content to export.");
-  }
-
-  // Must not sit under .result-slip-print-root (opacity ~0) or capture renders blank.
-  exportRoot.style.cssText += [
-    `width:${A4_WIDTH_MM}mm`,
-    "position:fixed",
-    "left:-12000px",
-    "top:0",
-    "opacity:1",
-    "visibility:visible",
-    "z-index:-1",
-    "pointer-events:none",
-    "background:#fff",
-  ].join(";");
-  document.body.appendChild(exportRoot);
-
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-  const captureHeightPx = expectedExportHeightPx(pageCount);
-
   try {
-    if (slip.offsetWidth < 100) {
-      throw new Error("Result slip is not laid out at full A4 width for capture.");
-    }
-
-    let dataUrl: string | null = null;
-    try {
-      dataUrl = await captureElementPng(exportRoot, captureHeightPx);
-    } catch (e1) {
-      console.warn("html-to-image capture failed:", e1);
-    }
-
-    if (!dataUrl) {
-      dataUrl = await captureElementPngHtml2Canvas(exportRoot, captureHeightPx);
-    }
-
-    if (!dataUrl) {
-      throw new Error("Could not capture result slip.");
-    }
-
-    return pngDataUrlToPdfBlob(dataUrl);
+    return await buildPdfFromSlipClone(slip);
   } finally {
-    exportRoot.remove();
     restore();
+    document.getElementById(CAPTURE_MOUNT_ID)?.remove();
   }
 }
