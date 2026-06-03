@@ -151,7 +151,7 @@ type DataContextValue = {
       >
     >,
   ) => void;
-  updateSettings: (patch: Partial<LabSettings>) => void;
+  updateSettings: (patch: Partial<LabSettings>) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -541,22 +541,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateSettings = useCallback(
-    (patch: Partial<LabSettings>) => {
-      let nextCustom: LabSettings["customTests"] | undefined;
+    async (patch: Partial<LabSettings>) => {
+      let merged: LabSettings | undefined;
       commit((s) => {
-        const next = { ...s.settings, ...patch };
-        nextCustom = patch.customTests ?? next.customTests;
-        return { ...s, settings: next };
+        merged = { ...s.settings, ...patch };
+        return { ...s, settings: merged };
       });
+      if (!merged) return;
+
       if (laboratoryId && useSupabase) {
-        void persistSettingsUpdate(laboratoryId, patch).catch((e) =>
-          syncError("update settings", e),
-        );
+        await persistSettingsUpdate(laboratoryId, merged);
         if (patch.customTests) {
-          void import("@/lib/supabase/ensure-catalogue").then(({ ensureCatalogueTestsForLaboratory }) =>
-            ensureCatalogueTestsForLaboratory(laboratoryId, nextCustom).catch((e) =>
-              syncError("sync catalogue", e),
-            ),
+          await import("@/lib/supabase/ensure-catalogue").then(
+            ({ ensureCatalogueTestsForLaboratory }) =>
+              ensureCatalogueTestsForLaboratory(laboratoryId, merged!.customTests),
           );
         }
       }

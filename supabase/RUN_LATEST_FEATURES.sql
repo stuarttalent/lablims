@@ -126,3 +126,6 @@ ALTER TABLE public.catalogue_tests
   ADD COLUMN IF NOT EXISTS test_kind catalogue_test_kind,
   ADD COLUMN IF NOT EXISTS constituent_test_ids text[],
   ADD COLUMN IF NOT EXISTS result_style text;
+
+-- 12) Lab profile save: lab_manager + upsert (run 00018_lab_settings_save_policy.sql)
+-- Fixes profile changes disappearing after reload when RLS blocked updates.

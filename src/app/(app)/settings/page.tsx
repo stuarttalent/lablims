@@ -21,16 +21,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { resolveTestPrice } from "@/lib/pricing";
 
 const LOGO_MAX_BYTES = 1_200_000;
 const LETTERHEAD_A4_MAX_BYTES = 5_000_000;
 
 export default function SettingsPage() {
-  const { store, updateSettings, resetDemoData } = useData();
+  const { store, updateSettings, resetDemoData, dataSource, hydrated } = useData();
   const { user } = useAuth();
   const privileged = Boolean(user && hasAdminPrivileges(user.role));
+  const canSaveProfile = privileged;
   const s = store.settings;
   const [labName, setLabName] = useState(s.labName);
   const [tagline, setTagline] = useState(s.tagline);
@@ -40,34 +41,68 @@ export default function SettingsPage() {
   const [reg, setReg] = useState(s.registrationNumber);
   const [footer, setFooter] = useState(s.reportFooter);
   const [deptText, setDeptText] = useState(s.departments.join(", "));
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [fhirBaseUrl, setFhirBaseUrl] = useState(s.fhirBaseUrl ?? "");
   const [fhirOrganizationId, setFhirOrganizationId] = useState(
     s.fhirOrganizationId ?? "",
   );
 
-  function saveProfile() {
+  useEffect(() => {
+    if (!hydrated) return;
+    const settings = store.settings;
+    setLabName(settings.labName);
+    setTagline(settings.tagline);
+    setAddress(settings.address);
+    setPhone(settings.phone);
+    setEmail(settings.email);
+    setReg(settings.registrationNumber);
+    setFooter(settings.reportFooter);
+    setDeptText(settings.departments.join(", "));
+    setFhirBaseUrl(settings.fhirBaseUrl ?? "");
+    setFhirOrganizationId(settings.fhirOrganizationId ?? "");
+  }, [hydrated, store.settings]);
+
+  async function saveProfile() {
+    if (!canSaveProfile) {
+      toast.error("Only lab managers and administrators can save the lab profile.");
+      return;
+    }
     const departments = deptText
       .split(",")
       .map((d) => d.trim())
       .filter(Boolean);
-    updateSettings({
-      labName,
-      tagline,
-      address,
-      phone,
-      email,
-      registrationNumber: reg,
-      reportFooter: footer,
-      departments: departments.length ? departments : s.departments,
-      ...(privileged
-        ? {
-            fhirBaseUrl: fhirBaseUrl.trim() || undefined,
-            fhirOrganizationId: fhirOrganizationId.trim() || undefined,
-          }
-        : {}),
-    });
-    toast.success("Lab profile saved locally.");
+    setSavingProfile(true);
+    try {
+      await updateSettings({
+        labName,
+        tagline,
+        address,
+        phone,
+        email,
+        registrationNumber: reg,
+        reportFooter: footer,
+        departments: departments.length ? departments : s.departments,
+        ...(privileged
+          ? {
+              fhirBaseUrl: fhirBaseUrl.trim() || undefined,
+              fhirOrganizationId: fhirOrganizationId.trim() || undefined,
+            }
+          : {}),
+      });
+      toast.success(
+        dataSource === "supabase"
+          ? "Lab profile saved."
+          : "Lab profile saved on this device.",
+      );
+    } catch (e) {
+      console.error("Save lab profile failed:", e);
+      toast.error(
+        "Could not save lab profile. If you use Supabase, run migration 00018_lab_settings_save_policy.sql and ensure your role is lab manager or admin.",
+      );
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   return (
@@ -117,7 +152,15 @@ export default function SettingsPage() {
             <Textarea rows={3} value={footer} onChange={(e) => setFooter(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
-            <Button onClick={saveProfile}>Save profile</Button>
+            <Button onClick={() => void saveProfile()} disabled={savingProfile || !canSaveProfile}>
+              {savingProfile ? "Saving…" : "Save profile"}
+            </Button>
+            {!canSaveProfile ? (
+              <p className="text-xs text-muted-foreground">
+                Your role can view settings but cannot update the lab profile. Ask a lab
+                manager or administrator.
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

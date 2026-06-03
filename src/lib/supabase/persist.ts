@@ -579,43 +579,56 @@ export async function persistInvoiceUpdate(
   }
 }
 
+function labSettingsRow(laboratoryId: string, settings: LabSettings): Record<string, unknown> {
+  return {
+    laboratory_id: laboratoryId,
+    lab_name: settings.labName,
+    tagline: settings.tagline,
+    address: settings.address,
+    phone: settings.phone,
+    email: settings.email,
+    registration_number: settings.registrationNumber,
+    report_footer: settings.reportFooter,
+    departments: settings.departments,
+    fhir_base_url: settings.fhirBaseUrl ?? null,
+    fhir_organization_id: settings.fhirOrganizationId ?? null,
+    lims_instance_id: settings.limsInstanceId ?? crypto.randomUUID(),
+    logo_data_url: settings.logoDataUrl ?? null,
+    letterhead_a4_pdf_data_url: settings.letterheadA4PdfDataUrl ?? null,
+    price_overrides: settings.priceOverrides ?? {},
+    catalogue_overrides: settings.catalogueOverrides ?? {},
+    custom_tests: settings.customTests ?? [],
+  };
+}
+
+/** Upsert full lab_settings row so saves survive reload (and work when no row existed). */
 export async function persistSettingsUpdate(
   laboratoryId: string,
-  patch: Partial<LabSettings>,
+  settings: LabSettings,
 ): Promise<void> {
   const supabase = await db();
-  const row: Record<string, unknown> = {};
-  if (patch.labName != null) row.lab_name = patch.labName;
-  if (patch.tagline != null) row.tagline = patch.tagline;
-  if (patch.address != null) row.address = patch.address;
-  if (patch.phone != null) row.phone = patch.phone;
-  if (patch.email != null) row.email = patch.email;
-  if (patch.registrationNumber != null) row.registration_number = patch.registrationNumber;
-  if (patch.reportFooter != null) row.report_footer = patch.reportFooter;
-  if (patch.departments != null) row.departments = patch.departments;
-  if (patch.fhirBaseUrl !== undefined) row.fhir_base_url = patch.fhirBaseUrl ?? null;
-  if (patch.fhirOrganizationId !== undefined)
-    row.fhir_organization_id = patch.fhirOrganizationId ?? null;
-  if (patch.limsInstanceId != null) row.lims_instance_id = patch.limsInstanceId;
-  if (patch.logoDataUrl !== undefined) row.logo_data_url = patch.logoDataUrl ?? null;
-  if (patch.letterheadA4PdfDataUrl !== undefined)
-    row.letterhead_a4_pdf_data_url = patch.letterheadA4PdfDataUrl ?? null;
-  if (patch.priceOverrides != null) row.price_overrides = patch.priceOverrides;
-  if (patch.catalogueOverrides != null)
-    row.catalogue_overrides = patch.catalogueOverrides;
-  if (patch.customTests != null) row.custom_tests = patch.customTests;
-  let { error } = await supabase
-    .from("lab_settings")
-    .update(row)
-    .eq("laboratory_id", laboratoryId);
+  const row = labSettingsRow(laboratoryId, settings);
+
+  let { error } = await supabase.from("lab_settings").upsert(row, {
+    onConflict: "laboratory_id",
+  });
+
   if (error && hasMissingColumn(error, "custom_tests")) {
     const fallback = { ...row };
     delete fallback.custom_tests;
-    ({ error } = await supabase
-      .from("lab_settings")
-      .update(fallback)
-      .eq("laboratory_id", laboratoryId));
+    ({ error } = await supabase.from("lab_settings").upsert(fallback, {
+      onConflict: "laboratory_id",
+    }));
   }
+  if (error && hasMissingColumn(error, "letterhead_a4_pdf_data_url")) {
+    const fallback = { ...row };
+    delete fallback.letterhead_a4_pdf_data_url;
+    delete fallback.custom_tests;
+    ({ error } = await supabase.from("lab_settings").upsert(fallback, {
+      onConflict: "laboratory_id",
+    }));
+  }
+
   if (error) throw error;
 }
 
