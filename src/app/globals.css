@@ -155,12 +155,31 @@
   }
   .result-slip-print-root {
     position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    overflow: visible !important;
     border: none !important;
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
+    background: white !important;
+    pointer-events: auto !important;
+  }
+
+  #als-cumulative-tests-slip,
+  #als-cumulative-tests-slip * {
+    visibility: visible;
+  }
+
+  #als-cumulative-tests-slip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    margin: 0 auto;
     background: white !important;
   }
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { printPdfBlobUrl } from "@/lib/print-pdf-blob";
+import { buildResultSlipPdfBlob } from "@/lib/result-slip-pdf";
 import { Download, Mail, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { buildResultSlipPdfBlob } from "@/lib/result-slip-pdf";
 
 export function SlipExportActions({
   orderId,
@@ -20,27 +21,78 @@ export function SlipExportActions({
   pdfBlobUrl?: string | null;
   onBeforeExport?: () => Promise<string | null>;
 }) {
+  async function resolvePdfBlobUrl(): Promise<string | null> {
+    if (pdfBlobUrl) return pdfBlobUrl;
+    if (onBeforeExport) {
+      const fromParent = await onBeforeExport();
+      if (fromParent) return fromParent;
+    }
+    const el = document.getElementById(elementId);
+    if (!el) return null;
+    try {
+      const blob = await buildResultSlipPdfBlob({ element: el });
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }
+
+  async function handlePrint() {
+    const blobUrl = await resolvePdfBlobUrl();
+    if (blobUrl) {
+      try {
+        await printPdfBlobUrl(blobUrl);
+        toast.message("Opening print dialog", {
+          description: "Choose your printer or Save as PDF.",
+        });
+      } catch {
+        toast.error("Could not print. Try Export PDF, then print the downloaded file.");
+      }
+      if (!pdfBlobUrl && !onBeforeExport) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      return;
+    }
+
+    const el = document.getElementById(elementId);
+    if (!el) {
+      toast.error("Report not ready for printing.");
+      return;
+    }
+
+    toast.message("Opening print dialog", {
+      description: "Printing the on-screen report layout.",
+    });
+    window.print();
+  }
+
   async function pdf() {
     let readyBlobUrl = pdfBlobUrl ?? null;
-    if (!readyBlobUrl && onBeforeExport) {
-      readyBlobUrl = await onBeforeExport();
-    }
+    let revokeAfterDownload = false;
+
     if (!readyBlobUrl) {
-      const el = document.getElementById(elementId);
-      if (!el) {
-        toast.error("Report not ready for export.");
-        return;
+      if (onBeforeExport) {
+        readyBlobUrl = await onBeforeExport();
+      } else {
+        const el = document.getElementById(elementId);
+        if (!el) {
+          toast.error("Report not ready for export.");
+          return;
+        }
+        try {
+          const blob = await buildResultSlipPdfBlob({ element: el });
+          readyBlobUrl = URL.createObjectURL(blob);
+          revokeAfterDownload = true;
+        } catch {
+          toast.error("Could not build PDF. Try Refresh PDF or Print.");
+          return;
+        }
       }
-      try {
-        const blob = await buildResultSlipPdfBlob({ element: el });
-        readyBlobUrl = URL.createObjectURL(blob);
-      } catch {
-        toast.message("Opening print dialog", {
-          description: "Choose Save as PDF to download this report.",
-        });
-        window.print();
-        return;
-      }
+    }
+
+    if (!readyBlobUrl) {
+      toast.error("PDF not ready yet.");
+      return;
     }
 
     const a = document.createElement("a");
@@ -49,6 +101,7 @@ export function SlipExportActions({
     document.body.appendChild(a);
     a.click();
     a.remove();
+    if (revokeAfterDownload) URL.revokeObjectURL(readyBlobUrl);
     toast.success("PDF downloaded.");
   }
 
@@ -62,11 +115,11 @@ export function SlipExportActions({
 
   return (
     <div className="flex flex-wrap gap-2 no-print">
-      <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+      <Button type="button" variant="outline" size="sm" onClick={() => void handlePrint()}>
         <Printer className="size-4" />
         Print
       </Button>
-      <Button type="button" size="sm" variant="secondary" onClick={pdf}>
+      <Button type="button" size="sm" variant="secondary" onClick={() => void pdf()}>
         <Download className="size-4" />
         Export PDF
       </Button>
