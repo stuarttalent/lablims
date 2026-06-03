@@ -80,6 +80,8 @@ async function captureElementPng(
       minWidth: `${A4_WIDTH_MM}mm`,
       maxWidth: `${A4_WIDTH_MM}mm`,
       margin: "0",
+      opacity: "1",
+      visibility: "visible",
       boxSizing: "border-box",
     },
     filter: (node) => {
@@ -121,14 +123,28 @@ export async function buildResultSlipPdfBlob({
       : (element.querySelector("#lablims-result-slip") as HTMLElement | null) ?? element;
 
   const restore = prepareSlipForCapture(slip);
-  const host =
-    slip.closest(".result-slip-print-root") ??
-    slip.parentElement ??
-    document.body;
 
   const { exportRoot, pageCount } = buildPaginatedSlipExportRoot(slip);
-  exportRoot.style.cssText += ";position:fixed;left:0;top:0;z-index:-1;opacity:0.01;pointer-events:none";
-  host.appendChild(exportRoot);
+  const hasPageContent = [...exportRoot.querySelectorAll(".result-slip-a4-page")].some(
+    (page) => (page.lastElementChild as HTMLElement | null)?.childElementCount,
+  );
+  if (!hasPageContent) {
+    throw new Error("Result slip has no content to export.");
+  }
+
+  // Must not sit under .result-slip-print-root (opacity ~0) or capture renders blank.
+  exportRoot.style.cssText += [
+    `width:${A4_WIDTH_MM}mm`,
+    "position:fixed",
+    "left:-12000px",
+    "top:0",
+    "opacity:1",
+    "visibility:visible",
+    "z-index:-1",
+    "pointer-events:none",
+    "background:#fff",
+  ].join(";");
+  document.body.appendChild(exportRoot);
 
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 

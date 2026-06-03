@@ -26,7 +26,8 @@ function getMeasureHost(): HTMLElement {
     `width:${A4_WIDTH_MM}mm`,
     `padding:${A4_MARGIN_CSS}`,
     "box-sizing:border-box",
-    "visibility:hidden",
+    "opacity:1",
+    "visibility:visible",
     "pointer-events:none",
     "background:#fff",
   ].join(";");
@@ -45,6 +46,21 @@ function measureElement(el: HTMLElement): number {
   return height;
 }
 
+/** Fallback when no pdf blocks are found — clone the live slip content as one page. */
+function cloneFullSlipPage(
+  slip: HTMLElement,
+  letterheadFragment: HTMLElement | null,
+): HTMLElement {
+  const { page, inner } = createPageShell(letterheadFragment);
+  const sourceInner = slip.querySelector<HTMLElement>(
+    ":scope > .relative.z-10",
+  );
+  if (sourceInner) {
+    inner.appendChild(sourceInner.cloneNode(true) as HTMLElement);
+  }
+  return page;
+}
+
 function createPageShell(letterheadFragment: HTMLElement | null): PageShell {
   const page = document.createElement("div");
   page.className = "result-slip-a4-page bg-white text-slate-900";
@@ -54,6 +70,8 @@ function createPageShell(letterheadFragment: HTMLElement | null): PageShell {
     `min-height:${A4_HEIGHT_MM}mm`,
     `max-height:${A4_HEIGHT_MM}mm`,
     "position:relative",
+    "display:flex",
+    "flex-direction:column",
     "overflow:hidden",
     "box-sizing:border-box",
     "page-break-after:always",
@@ -70,10 +88,10 @@ function createPageShell(letterheadFragment: HTMLElement | null): PageShell {
     "z-index:10",
     "display:flex",
     "flex-direction:column",
-    `height:${A4_HEIGHT_MM}mm`,
+    "min-height:0",
+    "flex:1",
     `padding:${A4_MARGIN_CSS}`,
     "box-sizing:border-box",
-    "overflow:hidden",
   ].join(";");
   page.appendChild(inner);
   return { page, inner };
@@ -191,11 +209,10 @@ function packBlocks(
     }
   }
 
-  if (pages.length > 1 && pages[pages.length - 1].inner.childElementCount === 0) {
-    pages.pop();
-  }
+  const nonEmpty = pages.filter((p) => p.inner.childElementCount > 0);
+  const finalPages = nonEmpty.length > 0 ? nonEmpty : pages;
 
-  return pages.map((p) => p.page);
+  return finalPages.map((p) => p.page);
 }
 
 /**
@@ -213,7 +230,10 @@ export function buildPaginatedSlipExportRoot(slip: HTMLElement): {
     ":scope > .pointer-events-none.absolute",
   );
 
-  const pageElements = packBlocks(blocks, letterheadLayer);
+  const pageElements =
+    blocks.length > 0
+      ? packBlocks(blocks, letterheadLayer)
+      : [cloneFullSlipPage(slip, letterheadLayer)];
 
   const exportRoot = document.createElement("div");
   exportRoot.id = "lablims-result-slip-pdf-export";
