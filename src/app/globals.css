@@ -186,6 +186,18 @@
   -webkit-print-color-adjust: exact;
 }
 
+#lablims-result-slip,
+#lablims-result-slip *,
+#lablims-result-slip-pdf-export,
+#lablims-result-slip-pdf-export * {
+  box-shadow: none !important;
+}
+
+.result-slip-pdf-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .result-slip-preview-stage {
   display: flex;
   justify-content: center;

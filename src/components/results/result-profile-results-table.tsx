@@ -31,7 +31,10 @@ export function ResultProfileResultsTable({
   specimenType: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-teal-100/80 shadow-sm print:break-inside-avoid-page">
+    <div
+      data-slip-table-root
+      className="result-slip-pdf-block overflow-hidden rounded-2xl border border-teal-100/80"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-teal-700 to-emerald-600 px-4 py-2.5">
         <h3 className="text-sm font-bold text-white">{title}</h3>
         <span className="text-[10px] font-medium uppercase tracking-wide text-teal-50/95">
@@ -103,7 +106,7 @@ export function ResultProfileComments({
   if (visible.length === 0) return null;
 
   return (
-    <div className="mt-3 space-y-2 print:break-inside-avoid">
+    <div className="result-slip-pdf-block mt-3 space-y-2">
       {visible.map((line) => (
         <p
           key={`${line.testId}-c`}

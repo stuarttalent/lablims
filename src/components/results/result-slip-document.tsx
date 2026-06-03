@@ -165,11 +165,11 @@ export function ResultSlipDocument({
         className="relative z-10 flex min-h-[297mm] flex-col"
         style={{ padding: A4_MARGIN_CSS, boxSizing: "border-box" }}
       >
-        <header className="flex flex-col gap-6 border-b border-teal-100 pb-6 sm:flex-row sm:items-start sm:justify-between print:break-inside-avoid">
+        <header className="result-slip-pdf-block flex flex-col gap-6 border-b border-teal-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
           {!hasA4Letterhead ? (
             <div className="flex flex-1 flex-wrap items-start gap-5">
               {store.settings.logoDataUrl ? (
-                <div className="flex h-[72px] w-36 shrink-0 items-center justify-center rounded-xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-2 shadow-sm">
+                <div className="flex h-[72px] w-36 shrink-0 items-center justify-center rounded-xl border border-teal-100 bg-gradient-to-b from-teal-50/80 to-white p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={store.settings.logoDataUrl}
@@ -178,7 +178,7 @@ export function ResultSlipDocument({
                   />
                 </div>
               ) : (
-                <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-emerald-600 text-lg font-bold tracking-tight text-white shadow-md">
+                <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-emerald-600 text-lg font-bold tracking-tight text-white">
                   {store.settings.labName
                     .split(/\s+/)
                     .slice(0, 2)
@@ -211,7 +211,7 @@ export function ResultSlipDocument({
           )}
 
           <div className="flex shrink-0 flex-col items-end gap-3 sm:pl-4">
-            <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50 to-emerald-50/60 px-4 py-2.5 text-center shadow-sm">
+            <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50 to-emerald-50/60 px-4 py-2.5 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-teal-800">
                 Official result report
               </p>
@@ -220,7 +220,7 @@ export function ResultSlipDocument({
               </p>
               <p className="text-[10px] text-teal-700/90">Issued {reportDate}</p>
             </div>
-            <div className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-sm">
+            <div className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white p-2.5">
               {qrSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -240,7 +240,7 @@ export function ResultSlipDocument({
           </div>
         </header>
 
-        <section className="mt-6 grid gap-4 rounded-2xl border border-teal-100/80 bg-gradient-to-br from-slate-50/90 via-teal-50/30 to-emerald-50/20 p-5 sm:grid-cols-2 print:break-inside-avoid shadow-sm">
+        <section className="result-slip-pdf-block mt-6 grid gap-4 rounded-2xl border border-teal-100/80 bg-gradient-to-br from-slate-50/90 via-teal-50/30 to-emerald-50/20 p-5 sm:grid-cols-2">
           <div className="rounded-xl bg-white/70 p-4 ring-1 ring-teal-100/60">
             <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
               Patient
@@ -299,7 +299,7 @@ export function ResultSlipDocument({
               ),
             );
             return (
-              <div key={group.id}>
+              <div key={group.id} className="space-y-4">
                 {tableLines.length > 0 ? (
                   <ResultProfileResultsTable
                     title={group.title}
@@ -308,7 +308,7 @@ export function ResultSlipDocument({
                   />
                 ) : null}
                 {tableLines.length === 0 && microLines.length > 0 ? (
-                  <div className="mb-3 rounded-t-xl bg-gradient-to-r from-teal-700 to-emerald-600 px-4 py-2.5">
+                  <div className="result-slip-pdf-block mb-3 rounded-t-xl bg-gradient-to-r from-teal-700 to-emerald-600 px-4 py-2.5">
                     <h3 className="text-sm font-bold text-white">{group.title}</h3>
                     <p className="text-[10px] text-teal-50/90">
                       Specimen: {group.specimenType}
@@ -330,7 +330,7 @@ export function ResultSlipDocument({
           })}
         </div>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-teal-100 shadow-md print:break-inside-avoid">
+        <section className="result-slip-pdf-block mt-8 overflow-hidden rounded-2xl border border-teal-100">
           <div className="bg-gradient-to-r from-teal-800 to-emerald-700 px-4 py-2.5">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-white">
               Result entry &amp; authorization
@@ -402,7 +402,7 @@ export function ResultSlipDocument({
         </section>
 
         {order.includeAiCommentInReport && order.aiGeneratedComment ? (
-          <section className="mt-8 overflow-hidden rounded-2xl border border-indigo-200/90 shadow-md print:break-inside-avoid">
+          <section className="result-slip-pdf-block mt-8 overflow-hidden rounded-2xl border border-indigo-200/90">
             <div className="bg-gradient-to-r from-indigo-700 to-violet-700 px-4 py-2.5">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-white">
                 Interpretive summary (AI-assisted)
@@ -418,7 +418,7 @@ export function ResultSlipDocument({
           </section>
         ) : null}
 
-        <footer className="mt-8 rounded-xl border border-teal-100 bg-gradient-to-br from-slate-50 to-teal-50/40 px-5 py-4 text-[10px] leading-relaxed text-slate-600">
+        <footer className="result-slip-pdf-block mt-8 rounded-xl border border-teal-100 bg-gradient-to-br from-slate-50 to-teal-50/40 px-5 py-4 text-[10px] leading-relaxed text-slate-600">
           <p className="font-medium text-teal-900">{store.settings.reportFooter}</p>
           <p className="mt-2">
             The QR code encodes a secure verification link for accession{" "}

@@ -22,7 +22,7 @@ export function MicrobiologyResultsReport({
   const micro = parseMicrobiologyResult(line);
 
   return (
-    <div className="mb-6 overflow-hidden rounded-2xl border border-cyan-200/80 shadow-sm print:break-inside-avoid-page">
+    <div className="result-slip-pdf-block mb-6 overflow-hidden rounded-2xl border border-cyan-200/80">
       <div className="bg-gradient-to-r from-cyan-700 to-teal-600 px-4 py-2.5">
         <h3 className="text-sm font-bold text-white">{testName}</h3>
         <p className="text-[10px] text-cyan-50/90">
@@ -65,7 +65,7 @@ export function MicrobiologyResultsReport({
             {micro.organisms.map((org, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-teal-100 bg-white p-3 shadow-sm"
+                className="rounded-xl border border-teal-100 bg-white p-3"
               >
                 <p className="text-xs font-bold text-teal-900">
                   Organism {micro.organisms.length > 1 ? `${idx + 1}: ` : ": "}

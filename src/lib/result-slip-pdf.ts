@@ -6,6 +6,10 @@ import {
   A4_WIDTH_MM,
   A4_WIDTH_PX,
 } from "@/lib/result-slip-a4";
+import {
+  buildPaginatedSlipExportRoot,
+  expectedExportHeightPx,
+} from "@/lib/result-slip-pdf-pagination";
 import { jsPDF } from "jspdf";
 
 type BuildResultSlipPdfOptions = {
@@ -60,12 +64,11 @@ function pngDataUrlToPdfBlob(dataUrl: string): Blob {
   return pdf.output("blob");
 }
 
-async function captureElementPng(slip: HTMLElement): Promise<string> {
+async function captureElementPng(
+  slip: HTMLElement,
+  heightPx: number,
+): Promise<string> {
   const { toPng } = await import("html-to-image");
-  const heightPx = Math.max(
-    A4_HEIGHT_PX,
-    Math.ceil(slip.scrollHeight || slip.offsetHeight || A4_HEIGHT_PX),
-  );
   return toPng(slip, {
     cacheBust: true,
     pixelRatio: 2,
@@ -88,12 +91,11 @@ async function captureElementPng(slip: HTMLElement): Promise<string> {
   });
 }
 
-async function captureElementPngHtml2Canvas(slip: HTMLElement): Promise<string> {
+async function captureElementPngHtml2Canvas(
+  slip: HTMLElement,
+  heightPx: number,
+): Promise<string> {
   const html2canvas = (await import("html2canvas")).default;
-  const heightPx = Math.max(
-    A4_HEIGHT_PX,
-    Math.ceil(slip.scrollHeight || slip.offsetHeight || A4_HEIGHT_PX),
-  );
   const canvas = await html2canvas(slip, {
     scale: 2,
     width: A4_WIDTH_PX,
@@ -119,7 +121,18 @@ export async function buildResultSlipPdfBlob({
       : (element.querySelector("#lablims-result-slip") as HTMLElement | null) ?? element;
 
   const restore = prepareSlipForCapture(slip);
+  const host =
+    slip.closest(".result-slip-print-root") ??
+    slip.parentElement ??
+    document.body;
+
+  const { exportRoot, pageCount } = buildPaginatedSlipExportRoot(slip);
+  exportRoot.style.cssText += ";position:fixed;left:0;top:0;z-index:-1;opacity:0.01;pointer-events:none";
+  host.appendChild(exportRoot);
+
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  const captureHeightPx = expectedExportHeightPx(pageCount);
 
   try {
     if (slip.offsetWidth < 100) {
@@ -128,13 +141,13 @@ export async function buildResultSlipPdfBlob({
 
     let dataUrl: string | null = null;
     try {
-      dataUrl = await captureElementPng(slip);
+      dataUrl = await captureElementPng(exportRoot, captureHeightPx);
     } catch (e1) {
       console.warn("html-to-image capture failed:", e1);
     }
 
     if (!dataUrl) {
-      dataUrl = await captureElementPngHtml2Canvas(slip);
+      dataUrl = await captureElementPngHtml2Canvas(exportRoot, captureHeightPx);
     }
 
     if (!dataUrl) {
@@ -143,6 +156,7 @@ export async function buildResultSlipPdfBlob({
 
     return pngDataUrlToPdfBlob(dataUrl);
   } finally {
+    exportRoot.remove();
     restore();
   }
 }
